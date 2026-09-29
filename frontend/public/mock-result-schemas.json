@@ -1,0 +1,905 @@
+{
+  "steelDesignDetails": {
+    "cad": {
+      "top": {
+        "id": "steeldesign.details.cad.top",
+        "min_height": 160
+      },
+      "bottom": {
+        "id": "steeldesign.details.cad.bottom",
+        "width": 400,
+        "height": 200
+      }
+    },
+    "cards": [
+      {
+        "id": "steeldesign.details.dimensional",
+        "title": "Dimensional Details:",
+        "fields": [
+          {
+            "id": "steeldesign.details.grade_of_material",
+            "label": "Grade of Material:",
+            "data_key": "grade_of_material",
+            "group": "member"
+          },
+          {
+            "id": "steeldesign.details.section_type",
+            "label": "Type:",
+            "data_key": "section_type",
+            "group": "member"
+          },
+          {
+            "id": "steeldesign.details.section_designation",
+            "label": "Section Designation",
+            "data_key": "section_designation",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.section_class",
+            "label": "Section Class",
+            "data_key": "section_class",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.total_depth",
+            "label": "Total Depth (mm)",
+            "data_key": "total_depth",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.web_thickness",
+            "label": "Web Thickness (mm)",
+            "data_key": "web_thickness",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.top_flange_width",
+            "label": "Top Flange Width (mm)",
+            "data_key": "top_flange_width",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.top_flange_thickness",
+            "label": "Top Flange Thickness (mm)",
+            "data_key": "top_flange_thickness",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.bottom_flange_width",
+            "label": "Bottom Flange Width (mm)",
+            "data_key": "bottom_flange_width",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.bottom_flange_thickness",
+            "label": "Bottom Flange Thickness (mm)",
+            "data_key": "bottom_flange_thickness",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.torsional_restraint",
+            "label": "Torsional Restraint",
+            "data_key": "torsional_restraint",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.warping_restraint",
+            "label": "Warping Restraint",
+            "data_key": "warping_restraint",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.web_type",
+            "label": "Web Type",
+            "data_key": "web_type",
+            "group": "dim"
+          },
+          {
+            "id": "steeldesign.details.effective_slab_width",
+            "label": "Effective Width of Slab (mm)",
+            "data_key": "effective_slab_width",
+            "group": "dim"
+          }
+        ]
+      },
+      {
+        "id": "steeldesign.details.shear_connector",
+        "title": "Shear Connector Details:",
+        "fields": [
+          {
+            "id": "steeldesign.details.shear.yield_strength",
+            "label": "Material Yield Strength (MPa)",
+            "data_key": "shear_material_yield_strength",
+            "group": "shear"
+          },
+          {
+            "id": "steeldesign.details.shear.ultimate_strength",
+            "label": "Material Ultimate Strength (MPa)",
+            "data_key": "shear_material_ultimate_strength",
+            "group": "shear"
+          },
+          {
+            "id": "steeldesign.details.shear.diameter",
+            "label": "Diameter (mm)",
+            "data_key": "shear_diameter",
+            "group": "shear"
+          },
+          {
+            "id": "steeldesign.details.shear.height",
+            "label": "Height (mm)",
+            "data_key": "shear_height",
+            "group": "shear"
+          },
+          {
+            "id": "steeldesign.details.shear.transverse_spacing",
+            "label": "Transverse Spacing (mm)",
+            "data_key": "shear_transverse_spacing",
+            "group": "shear"
+          },
+          {
+            "id": "steeldesign.details.shear.studs_per_section",
+            "label": "No. of Shear Studs per Section",
+            "data_key": "shear_studs_per_section",
+            "group": "shear"
+          },
+          {
+            "id": "steeldesign.details.shear.longitudinal_spacing",
+            "label": "Average Longitudinal Spacing (mm)",
+            "data_key": "shear_longitudinal_spacing",
+            "group": "shear"
+          }
+        ]
+      },
+      {
+        "id": "steeldesign.details.section_properties",
+        "title": "Section Properties:",
+        "fields": [
+          {
+            "id": "member_properties.girder_details.section_properties.mass",
+            "label": "Mass, M (Kg/m)",
+            "data_key": "mass",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.section_properties.area",
+            "label": "Sectional Area, a (m<sup>2</sup>)",
+            "data_key": "area",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.section_properties.iz",
+            "label": "2nd Moment of Area, I<sub>z</sub> (m<sup>4</sup>)",
+            "data_key": "iz",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.section_properties.iy",
+            "label": "2nd Moment of Area, I<sub>y</sub> (m<sup>4</sup>)",
+            "data_key": "iv",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.section_properties.radius_gyration_z",
+            "label": "Radius of Gyration, r<sub>z</sub> (m)",
+            "data_key": "rz",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.section_properties.radius_gyration_y",
+            "label": "Radius of Gyration, r<sub>y</sub> (m)",
+            "data_key": "rv",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.material_properties.modulus_of_elasticity_zz",
+            "label": "Elastic Modulus, Z<sub>z</sub> (m<sup>3</sup>)",
+            "data_key": "zz",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.material_properties.modulus_of_elasticity_zy",
+            "label": "Elastic Modulus, Z<sub>y</sub> (m<sup>3</sup>)",
+            "data_key": "zv",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.material_properties.plastic_modulus_zuz",
+            "label": "Plastic Modulus, Z<sub>pz</sub> (m<sup>3</sup>)",
+            "data_key": "zuz",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.material_properties.plastic_modulus_zuy",
+            "label": "Plastic Modulus, Z<sub>py</sub> (m<sup>3</sup>)",
+            "data_key": "zuv",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.section_properties.torsion_constant_it",
+            "label": "Torsion Constant, I<sub>t</sub> (m<sup>4</sup>)",
+            "data_key": "it",
+            "group": "section"
+          },
+          {
+            "id": "member_properties.girder_details.section_properties.warping_constant_iw",
+            "label": "Warping Constant, I<sub>w</sub> (m<sup>6</sup>)",
+            "data_key": "iw",
+            "group": "section"
+          }
+        ]
+      }
+    ],
+    "stiffener": {
+      "id": "steeldesign.details.stiffener.table",
+      "row_height": 40,
+      "columns": [
+        {
+          "id": "stiffener_type",
+          "label": "Type"
+        },
+        {
+          "id": "steeldesign.details.stiffener.col.grade",
+          "label": "Grade of Material",
+          "suffix": "grade"
+        },
+        {
+          "id": "steeldesign.details.stiffener.col.thickness",
+          "label": "Thickness (mm)",
+          "suffix": "thickness"
+        },
+        {
+          "id": "steeldesign.details.stiffener.col.width",
+          "label": "Width (mm)",
+          "suffix": "width"
+        },
+        {
+          "id": "steeldesign.details.stiffener.col.spacing",
+          "label": "Spacing (mm)",
+          "suffix": "spacing"
+        }
+      ],
+      "rows": [
+        {
+          "id": "steeldesign.details.stiffener.row.intermediate",
+          "label": "Intermediate",
+          "data_prefix": "stiff_intermediate"
+        },
+        {
+          "id": "steeldesign.details.stiffener.row.longitudinal",
+          "label": "Longitudinal",
+          "data_prefix": "stiff_longitudinal"
+        },
+        {
+          "id": "steeldesign.details.stiffener.row.bearing",
+          "label": "Bearing",
+          "data_prefix": "stiff_bearing"
+        }
+      ]
+    }
+  },
+  "transverseMemberDesign": {
+    "id": "transverse_member_design",
+    "title": "Transverse Member Design",
+    "window": {
+      "width": 1100,
+      "height": 720,
+      "min_width": 950,
+      "min_height": 550
+    },
+    "global_bar": [
+      {
+        "id": "transverse_member_design.select_girder",
+        "label": "Select Girder",
+        "type": "combo"
+      },
+      {
+        "id": "transverse_member_design.load_combination",
+        "label": "Load Combination",
+        "type": "combo",
+        "default": "Envelope"
+      }
+    ],
+    "crossbracing_tab": {
+      "id": "transverse_member_design.cb.tab",
+      "label": "Crossbracing",
+      "left_panel": {
+        "section_inputs": {
+          "label": "Section Inputs:",
+          "label_width": 100,
+          "fields": [
+            {
+              "id": "transverse_member_design.cb.section_inputs.design",
+              "label": "Design:",
+              "type": "line",
+              "read_only": true
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.no_of_cb",
+              "label": "No. of Crossbracing:",
+              "type": "line",
+              "read_only": true
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.bracing_type",
+              "label": "Type of Bracing:",
+              "type": "line",
+              "read_only": true
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.connection_type",
+              "label": "Type of Connection:",
+              "type": "line",
+              "read_only": true
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.bracing_section_type",
+              "label": "Bracing Section Type:",
+              "type": "line",
+              "read_only": true
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.bracing_section_designation",
+              "label": "Bracing Section Designation:",
+              "type": "line",
+              "read_only": true
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.top_chord_enabled",
+              "label": "Top Chord",
+              "type": "checkbox",
+              "default": true,
+              "enabled": false
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.top_chord_section_type",
+              "label": " Top Chord Section Type:",
+              "type": "line",
+              "read_only": true
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.top_chord_section_designation",
+              "label": " Top Chord Section Designation:",
+              "type": "line",
+              "read_only": true
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.bottom_chord_enabled",
+              "label": "Bottom Chord",
+              "type": "checkbox",
+              "default": true,
+              "enabled": false
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.bottom_chord_section_type",
+              "label": " Bottom Chord Section Type:",
+              "type": "line",
+              "read_only": true
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.bottom_chord_section_designation",
+              "label": " Bottom Chord Section Designation:",
+              "type": "line",
+              "read_only": true
+            },
+            {
+              "id": "transverse_member_design.cb.section_inputs.spacing",
+              "label": "Spacing:",
+              "type": "line",
+              "read_only": true
+            }
+          ]
+        }
+      },
+      "right_panel": {
+        "bracing_diagram": {
+          "id": "transverse_member_design.cb.bracing_diagram",
+          "height": 170
+        },
+        "section_cards": [
+          {
+            "id": "transverse_member_design.cb.section_properties.bracing",
+            "title": "Bracing",
+            "col1": [
+              "L (m)",
+              "H (m)",
+              "B (m)",
+              "tw (m)",
+              "tF (m)",
+              "rz (cm)"
+            ],
+            "col2": [
+              "M (Kg/m)",
+              "A (cm²)",
+              "Iz (cm⁴)",
+              "Iv (cm⁴)",
+              "rv (cm)"
+            ],
+            "col3": [
+              "Zz (cm³)",
+              "Zv (cm³)",
+              "Zuz (cm³)",
+              "Zuv (cm³)"
+            ]
+          },
+          {
+            "id": "transverse_member_design.cb.section_properties.top_chord",
+            "title": "Top Chord",
+            "col1": [
+              "L (m)",
+              "H (m)",
+              "B (m)",
+              "tw (m)",
+              "tF (m)",
+              "rz (cm)"
+            ],
+            "col2": [
+              "M (Kg/m)",
+              "A (cm²)",
+              "Iz (cm⁴)",
+              "Iv (cm⁴)",
+              "rv (cm)"
+            ],
+            "col3": [
+              "Zz (cm³)",
+              "Zv (cm³)",
+              "Zuz (cm³)",
+              "Zuv (cm³)"
+            ]
+          },
+          {
+            "id": "transverse_member_design.cb.section_properties.bottom_chord",
+            "title": "Bottom Chord",
+            "col1": [
+              "L (m)",
+              "H (m)",
+              "B (m)",
+              "tw (m)",
+              "tF (m)",
+              "rz (cm)"
+            ],
+            "col2": [
+              "M (Kg/m)",
+              "A (cm²)",
+              "Iz (cm⁴)",
+              "Iv (cm⁴)",
+              "rv (cm)"
+            ],
+            "col3": [
+              "Zz (cm³)",
+              "Zv (cm³)",
+              "Zuz (cm³)",
+              "Zuv (cm³)"
+            ]
+          }
+        ]
+      },
+      "results_table": {
+        "id": "transverse_member_design.cb.design_check.results",
+        "title": "Design Check Results:",
+        "min_height": 200,
+        "columns": [
+          "Member",
+          "Force Type",
+          "Force (kN)",
+          "Section",
+          "Connection",
+          "λ (slend.)",
+          "Capacity (kN)",
+          "Utilization Ratio",
+          "Status"
+        ]
+      }
+    },
+    "end_diaphragm_tab": {
+      "id": "transverse_member_design.ed.tab",
+      "label": "End Diaphragm",
+      "left_panel": {
+        "section_inputs": {
+          "label": "Section Inputs:",
+          "label_width": 100,
+          "fields": [
+            {
+              "id": "transverse_member_design.ed.section_inputs.design",
+              "label": "Design:",
+              "type": "line",
+              "read_only": true,
+              "group": null
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.type",
+              "label": "Type:",
+              "type": "line",
+              "read_only": true,
+              "group": null,
+              "on_change": "_on_ed_type_changed"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.no_of_cb",
+              "label": "No. of End-Diaphragms:",
+              "type": "line",
+              "read_only": true,
+              "group": null
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.connection_type",
+              "label": "Type of Connection:",
+              "type": "line",
+              "read_only": true,
+              "group": null
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.bracing_type",
+              "label": "Type of Bracing:",
+              "type": "line",
+              "read_only": true,
+              "group": "crossbracing"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.bracing_section_type",
+              "label": "Bracing Section Type:",
+              "type": "line",
+              "read_only": true,
+              "group": "crossbracing"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.bracing_section_designation",
+              "label": "Bracing Section Designation:",
+              "type": "line",
+              "read_only": true,
+              "group": "crossbracing"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.top_chord_enabled",
+              "label": "Top Chord",
+              "type": "checkbox",
+              "default": true,
+              "enabled": false,
+              "group": "crossbracing"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.top_chord_section_type",
+              "label": "Top Chord Section Type:",
+              "type": "line",
+              "read_only": true,
+              "group": "crossbracing"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.top_chord_section_designation",
+              "label": "Top Chord Section Designation:",
+              "type": "line",
+              "read_only": true,
+              "group": "crossbracing"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.bottom_chord_enabled",
+              "label": "Bottom Chord",
+              "type": "checkbox",
+              "default": true,
+              "enabled": false,
+              "group": "crossbracing"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.bottom_chord_section_type",
+              "label": "Bottom Chord Section Type:",
+              "type": "line",
+              "read_only": true,
+              "group": "crossbracing"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.bottom_chord_section_designation",
+              "label": "Bottom Chord Section Designation:",
+              "type": "line",
+              "read_only": true,
+              "group": "crossbracing"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.is_section",
+              "label": "IS Section Designation:",
+              "type": "line",
+              "read_only": true,
+              "group": "welded_beam"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.symmetry",
+              "label": "Symmetry:",
+              "type": "line",
+              "read_only": true,
+              "group": "welded_beam"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.total_depth",
+              "label": "Total Depth (mm):",
+              "type": "line",
+              "read_only": true,
+              "group": "welded_beam"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.web_thickness",
+              "label": "Web Thickness (mm):",
+              "type": "line",
+              "read_only": true,
+              "group": "welded_beam"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.top_flange_width",
+              "label": "Top Flange Width (mm):",
+              "type": "line",
+              "read_only": true,
+              "group": "welded_beam"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.top_flange_thickness",
+              "label": "Top Flange Thickness (mm):",
+              "type": "line",
+              "read_only": true,
+              "group": "welded_beam"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.bottom_flange_width",
+              "label": "Bottom Flange Width (mm):",
+              "type": "line",
+              "read_only": true,
+              "group": "welded_beam"
+            },
+            {
+              "id": "transverse_member_design.ed.section_inputs.bottom_flange_thickness",
+              "label": "Bottom Flange Thickness (mm):",
+              "type": "line",
+              "read_only": true,
+              "group": "welded_beam"
+            }
+          ]
+        }
+      },
+      "right_panel": {
+        "bracing_diagram": {
+          "id": "transverse_member_design.ed.bracing_diagram",
+          "height": 170
+        },
+        "section_cards": [
+          {
+            "id": "transverse_member_design.ed.section_properties.bracing",
+            "title": "End Diaphragm",
+            "col1": [
+              "L (m)",
+              "H (m)",
+              "B (m)",
+              "tw (m)",
+              "tF (m)",
+              "rz (cm)"
+            ],
+            "col2": [
+              "M (Kg/m)",
+              "A (cm²)",
+              "Iz (cm⁴)",
+              "Iv (cm⁴)",
+              "rv (cm)"
+            ],
+            "col3": [
+              "Zz (cm³)",
+              "Zv (cm³)",
+              "Zuz (cm³)",
+              "Zuv (cm³)"
+            ]
+          },
+          {
+            "id": "transverse_member_design.ed.section_properties.top_chord",
+            "title": "Top Chord",
+            "col1": [
+              "L (m)",
+              "H (m)",
+              "B (m)",
+              "tw (m)",
+              "tF (m)",
+              "rz (cm)"
+            ],
+            "col2": [
+              "M (Kg/m)",
+              "A (cm²)",
+              "Iz (cm⁴)",
+              "Iv (cm⁴)",
+              "rv (cm)"
+            ],
+            "col3": [
+              "Zz (cm³)",
+              "Zv (cm³)",
+              "Zuz (cm³)",
+              "Zuv (cm³)"
+            ]
+          },
+          {
+            "id": "transverse_member_design.ed.section_properties.bottom_chord",
+            "title": "Bottom Chord",
+            "col1": [
+              "L (m)",
+              "H (m)",
+              "B (m)",
+              "tw (m)",
+              "tF (m)",
+              "rz (cm)"
+            ],
+            "col2": [
+              "M (Kg/m)",
+              "A (cm²)",
+              "Iz (cm⁴)",
+              "Iv (cm⁴)",
+              "rv (cm)"
+            ],
+            "col3": [
+              "Zz (cm³)",
+              "Zv (cm³)",
+              "Zuz (cm³)",
+              "Zuv (cm³)"
+            ]
+          }
+        ]
+      },
+      "results_table": {
+        "id": "transverse_member_design.ed.design_check.results",
+        "title": "Design Check Results:",
+        "min_height": 200
+      }
+    }
+  },
+  "deckDesignSummary": {
+    "properties_card": {
+      "title": "Deck Properties:",
+      "fields": [
+        {
+          "label": "Grade of Material:",
+          "data_key": "deck_grade"
+        },
+        {
+          "label": "Thickness (mm):",
+          "data_key": "deck_thickness"
+        },
+        {
+          "label": "Deck Overhang (mm):",
+          "data_key": "deck_overhang"
+        }
+      ]
+    },
+    "reinforcement_table": {
+      "title": "Reinforcement Details:",
+      "columns": [
+        "Position",
+        "Material Yield\nStrength (MPa)",
+        "Diameter (mm)",
+        "Spacing (mm)",
+        "Clear Cover\n(mm)",
+        "Area (mm²)"
+      ],
+      "rows": [
+        {
+          "label": "Top Layer",
+          "prefix": "rebar_top"
+        },
+        {
+          "label": "Bottom Layer",
+          "prefix": "rebar_bottom"
+        },
+        {
+          "label": "Overhang",
+          "prefix": "rebar_overhang",
+          "is_overhang": true
+        }
+      ],
+      "data_suffixes": [
+        "yield",
+        "dia",
+        "spacing",
+        "cover",
+        "area"
+      ]
+    },
+    "utilization_card": {
+      "title": "Utilization Summary:",
+      "checks": [
+        {
+          "key": "ur_bot_uls",
+          "label": "ULS - Bottom (Sagging)",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_top_uls",
+          "label": "ULS - Top (Hogging)",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_bot_shear",
+          "label": "ULS - One-Way Shear (Interior)",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_bot_punch",
+          "label": "ULS - Punching Shear (Interior)",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_oh_uls",
+          "label": "ULS - Overhang (Flexure)",
+          "is_overhang": true
+        },
+        {
+          "key": "ur_oh_shear",
+          "label": "ULS - One-Way Shear (Overhang)",
+          "is_overhang": true
+        },
+        {
+          "key": "ur_oh_punch",
+          "label": "ULS - Punching Shear (Overhang)",
+          "is_overhang": true
+        },
+        {
+          "key": "ur_bot_sls_c",
+          "label": "SLS - Bottom Concrete Stress",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_bot_sls_s",
+          "label": "SLS - Bottom Steel Stress",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_top_sls_c",
+          "label": "SLS - Top Concrete Stress",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_top_sls_s",
+          "label": "SLS - Top Steel Stress",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_bot_crack",
+          "label": "SLS - Bottom Crack Width",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_top_crack",
+          "label": "SLS - Top Crack Width",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_oh_sls_c",
+          "label": "SLS - Overhang Concrete Stress",
+          "is_overhang": true
+        },
+        {
+          "key": "ur_oh_sls_s",
+          "label": "SLS - Overhang Steel Stress",
+          "is_overhang": true
+        },
+        {
+          "key": "ur_oh_crack",
+          "label": "SLS - Overhang Crack Width",
+          "is_overhang": true
+        },
+        {
+          "key": "ur_composite_trans_shear",
+          "label": "Composite - Transverse Shear (Cl.606.10)",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_composite_crack",
+          "label": "Composite - Crack Control, Aₛ,min (Cl.604.4)",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_composite_conc_stress",
+          "label": "Composite - Concrete Stress SLS (Cl.604.3.1)",
+          "is_overhang": false
+        },
+        {
+          "key": "ur_composite_rebar_stress",
+          "label": "Composite - Rebar Stress SLS (Cl.604.3.1)",
+          "is_overhang": false
+        }
+      ]
+    },
+    "design_check_card": {
+      "title": "Design Check:",
+      "data_key": "deck_design_check"
+    }
+  }
+}

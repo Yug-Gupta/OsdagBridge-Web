@@ -1,0 +1,3569 @@
+[
+  {
+    "label": "Typical Section Details",
+    "schema": {
+      "id": "typical_section.tab",
+      "layout": {
+        "type": "panel"
+      },
+      "header": {
+        "rows": [
+          {
+            "fields": [
+              {
+                "id": "typical_section.cad_preview",
+                "type": "direct_widget_classes",
+                "widget_class": null,
+                "widget_props": {
+                  "scale_factor": 0.65,
+                  "minimum_height": 200,
+                  "wrap_in_scroll": true,
+                  "container_min_height": 280,
+                  "container_max_height": 380,
+                  "container_margins": [
+                    5,
+                    5,
+                    5,
+                    5
+                  ],
+                  "container_style": "QWidget { background: transparent; border: 1px solid #b0b0b0; border-radius: 8px; }"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "primary_fields": {
+        "label_width": 200,
+        "rows": [
+          {
+            "fields": [
+              {
+                "id": "typical_section.no_of_girders",
+                "label": "No. of Girders:",
+                "type": "textbox",
+                "on_editing_finished": "on_no_of_girders_changed"
+              },
+              {
+                "id": "typical_section.girder_spacing",
+                "label": "Girder Spacing (m):",
+                "type": "textbox",
+                "on_editing_finished": "on_girder_spacing_changed"
+              }
+            ]
+          },
+          {
+            "fields": [
+              {
+                "id": "typical_section.deck_overhang",
+                "label": "Deck Overhang Width (m):",
+                "type": "textbox",
+                "read_only": true
+              },
+              {
+                "id": "typical_section.overall_bridge_width",
+                "label": "Overall Bridge Width (m):",
+                "type": "textbox",
+                "read_only": true
+              }
+            ]
+          },
+          {
+            "fields": [
+              {},
+              {
+                "type": "notice",
+                "id": "layout_notice"
+              }
+            ]
+          }
+        ]
+      },
+      "tabs": [
+        {
+          "id": "typical_section.deck_details.tab",
+          "label": "Deck Details",
+          "label_width": 200,
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "typical_section.deck_thickness",
+                  "label": "Deck Thickness (mm):",
+                  "type": "textbox",
+                  "on_editing_finished": "validate_deck_thickness"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.footpath_width",
+                  "label": "Footpath Width (m):",
+                  "type": "textbox",
+                  "on_editing_finished": "on_layout_width_changed"
+                },
+                {
+                  "id": "typical_section.footpath_thickness",
+                  "label": "Footpath Thickness (mm):",
+                  "type": "textbox",
+                  "on_editing_finished": "validate_footpath_thickness"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "member_properties.cross_bracing_details",
+          "label": "Crash Barrier",
+          "label_width": 210,
+          "top_margin": 20,
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "typical_section.crash_barrier.type",
+                  "label": "Type:",
+                  "type": "combobox",
+                  "choices": [
+                    "IRC 5 - RCC Crash Barrier",
+                    "IRC 5 - High Containment RCC Crash Barrier",
+                    "IRC 5 - Metallic Crash Barrier with Single W-Beam",
+                    "IRC 5 - Metallic Crash Barrier with Double W-Beam",
+                    "Custom"
+                  ],
+                  "on_change": "on_crash_barrier_type_changed",
+                  "on_change_compute": {
+                    "function": "compute_crash_barrier_values"
+                  }
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.crash_barrier.density",
+                  "label": "Material Density (kN/m³):",
+                  "type": "textbox"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.crash_barrier.width",
+                  "label": "Width (m):",
+                  "type": "textbox",
+                  "on_editing_finished": "on_layout_width_changed"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.crash_barrier.height",
+                  "label": "Height (m):",
+                  "type": "textbox"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.crash_barrier.area",
+                  "label": "Area (m²):",
+                  "type": "textbox"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.crash_barrier.load",
+                  "label": "Load (kN/m):",
+                  "type": "textbox",
+                  "placeholder": "Enter custom load"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.crash_barrier.post_spacing",
+                  "label": "Spacing between Posts (m):",
+                  "type": "textbox"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "typical_section.median.tab",
+          "label": "Median",
+          "label_width": 210,
+          "top_margin": 20,
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "typical_section.median.type",
+                  "label": "Type:",
+                  "type": "combobox",
+                  "choices": [
+                    "IRC 5 - Raised Kerb",
+                    "IRC 5 - RCC Crash Barrier",
+                    "IRC 5 - Metallic Crash Barrier with Single W-Beam",
+                    "IRC 5 - Metallic Crash Barrier with Double W-Beam",
+                    "Custom"
+                  ],
+                  "on_change": "on_median_type_changed",
+                  "on_change_compute": {
+                    "function": "compute_median_values"
+                  }
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.median.density",
+                  "label": "Material Density (kN/m³):",
+                  "type": "textbox"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.median.width",
+                  "label": "Width (m):",
+                  "type": "textbox",
+                  "on_editing_finished": "on_layout_width_changed"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.median.height",
+                  "label": "Height (m):",
+                  "type": "textbox"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.median.area",
+                  "label": "Area (m²):",
+                  "type": "textbox"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.median.load",
+                  "label": "Load (kN/m):",
+                  "type": "textbox"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.median.post_spacing",
+                  "label": "Spacing between Posts (m):",
+                  "type": "textbox"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "typical_section.railing.tab",
+          "label": "Railing",
+          "label_width": 180,
+          "top_margin": 20,
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "typical_section.railing.type",
+                  "label": "Type:",
+                  "type": "combobox",
+                  "choices": [
+                    "IRC 5 - RCC Railing",
+                    "IRC 5 - Steel Railing",
+                    "Custom"
+                  ],
+                  "on_change": "on_railing_type_changed",
+                  "on_change_compute": {
+                    "function": "compute_railing_values"
+                  }
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.railing.width",
+                  "label": "Width (m):",
+                  "type": "textbox",
+                  "on_editing_finished": "on_layout_width_changed"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.railing.height",
+                  "label": "Height (m):",
+                  "type": "textbox"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.railing.load_mode",
+                  "label": "Mode:",
+                  "type": "combobox",
+                  "choices": [
+                    "As per IRC 6",
+                    "Custom"
+                  ],
+                  "on_change": "on_railing_load_mode_changed"
+                },
+                {
+                  "id": "typical_section.railing.load_value",
+                  "label": "Load (kN/m):",
+                  "type": "textbox",
+                  "enabled": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "typical_section.wearing_course.tab",
+          "label": "Wearing Course",
+          "label_width": 200,
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "typical_section.wearing_course.material",
+                  "label": "Material:",
+                  "type": "combobox",
+                  "choices": [
+                    "Concrete",
+                    "Bituminous",
+                    "Custom"
+                  ],
+                  "on_change": "on_wearing_material_changed",
+                  "on_change_compute": {
+                    "function": "compute_wearing_course_values"
+                  }
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.wearing_course.density",
+                  "label": "Density (kN/m³):",
+                  "type": "textbox",
+                  "enabled": false
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "typical_section.wearing_course.thickness",
+                  "label": "Thickness (mm):",
+                  "type": "textbox"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "typical_section.lane_details.tab",
+          "label": "Lane Details",
+          "disable": true,
+          "top_margin": 20,
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "typical_section.lane_details.lane_table",
+                  "label": "No. of Traffic Lanes:",
+                  "type": "table_with_count",
+                  "count_id": "typical_section.lane_details.lane_table_count",
+                  "count_choices": [
+                    "1",
+                    "2"
+                  ],
+                  "on_count_change": "on_lane_count_changed",
+                  "columns": [
+                    {
+                      "header": "Traffic Lane Number",
+                      "resize": "contents"
+                    },
+                    {
+                      "header": "Distance from inner edge of crash barrier to left edge of lane (m)",
+                      "resize": "stretch"
+                    },
+                    {
+                      "header": "Lane Width (m)",
+                      "resize": "contents"
+                    }
+                  ],
+                  "alternating_rows": true,
+                  "show_vertical_header": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "main_id": "typical_section.tab.main",
+    "filler_column_index": null
+  },
+  {
+    "label": "Member Properties",
+    "schema": {
+      "id": "member_properties.main",
+      "layout": {
+        "type": "tabs"
+      },
+      "tabs": [
+        {
+          "title": "Girder Details",
+          "schema": {
+            "id": "member_properties.girder_details",
+            "layout": {
+              "type": "columns",
+              "columns": 2,
+              "column_widths": [
+                1,
+                1
+              ]
+            },
+            "sections": [
+              {
+                "column": 0,
+                "col_span": 2,
+                "title": "",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.cad_preview",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "Girder Overview",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.select_girder",
+                        "label": "Select Girder:",
+                        "type": "combobox",
+                        "choices": []
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.total_span",
+                        "label": "Total Span (m):",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.apply_exterior",
+                        "type": "button",
+                        "text": "Apply changes to exterior girders",
+                        "on_click": "_on_apply_exterior_clicked"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.apply_interior",
+                        "type": "button",
+                        "text": "Apply changes to interior girders",
+                        "on_click": "_on_apply_interior_clicked"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.segment_table",
+                        "type": "direct_widget_classes",
+                        "widget_class": null,
+                        "on_row_select": "_on_segment_selected",
+                        "on_data_changed": "_on_segment_data_changed"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "row_span": 2,
+                "title": "Section Inputs",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.member_id",
+                        "label": "Member ID:",
+                        "type": "combobox",
+                        "choices": []
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.type",
+                        "label": "Type:",
+                        "type": "combobox",
+                        "choices": [
+                          "Welded",
+                          "Rolled"
+                        ],
+                        "on_change": "_on_girder_type_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.symmetry",
+                        "label": "Symmetry:",
+                        "type": "combobox",
+                        "choices": [
+                          "Girder Symmetric",
+                          "Girder Unsymmetric"
+                        ],
+                        "on_change": "_on_symmetry_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.depth",
+                        "label": "Total Depth, d (mm):",
+                        "type": "adaptive",
+                        "controller": "geometry.design_mode",
+                        "modes": {
+                          "Optimized": {
+                            "type": "bounds_dialog_btn",
+                            "text": "Set Bounds",
+                            "lower_limit": 200.0,
+                            "upper_limit": 2000.0,
+                            "with_increment": true,
+                            "on_accepted": "_on_bounds_accepted"
+                          },
+                          "Custom": {
+                            "type": "textbox",
+                            "placeholder": "",
+                            "on_editing_finished": "_update_section_drawing",
+                            "on_change_compute": {
+                              "function": "_compute_welded_section_properties"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.top_flange_width",
+                        "label": "Width of Top Flange, t<sub>fw</sub> (mm):",
+                        "type": "adaptive",
+                        "controller": "geometry.design_mode",
+                        "modes": {
+                          "Optimized": {
+                            "type": "bounds_dialog_btn",
+                            "text": "Set Bounds",
+                            "lower_limit": 100.0,
+                            "upper_limit": 1000.0,
+                            "with_increment": true,
+                            "on_accepted": "_on_bounds_accepted"
+                          },
+                          "Custom": {
+                            "type": "textbox",
+                            "placeholder": "",
+                            "on_editing_finished": "_on_top_flange_changed",
+                            "on_change_compute": {
+                              "function": "_compute_welded_section_properties"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.top_flange_thickness",
+                        "label": "Top Flange Thickness, t<sub>ft</sub> (mm):",
+                        "type": "adaptive",
+                        "controller": "geometry.design_mode",
+                        "modes": {
+                          "Optimized": {
+                            "type": "all_custom",
+                            "on_selected": "_on_all_custom_selected"
+                          },
+                          "Custom": {
+                            "type": "combobox",
+                            "choices": [
+                              "8",
+                              "10",
+                              "12",
+                              "14",
+                              "16",
+                              "18",
+                              "20",
+                              "22",
+                              "25",
+                              "28",
+                              "32",
+                              "36",
+                              "40",
+                              "45",
+                              "50",
+                              "56",
+                              "63",
+                              "75",
+                              "80",
+                              "90",
+                              "100",
+                              "110",
+                              "120"
+                            ],
+                            "on_change": "_on_top_flange_changed",
+                            "on_change_compute": {
+                              "function": "_compute_welded_section_properties"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.bottom_flange_width",
+                        "label": "Width of Bottom Flange, b<sub>fw</sub> (mm):",
+                        "type": "adaptive",
+                        "controller": "geometry.design_mode",
+                        "modes": {
+                          "Optimized": {
+                            "type": "bounds_dialog_btn",
+                            "text": "Set Bounds",
+                            "lower_limit": 100.0,
+                            "upper_limit": 1000.0,
+                            "with_increment": true,
+                            "on_accepted": "_on_bounds_accepted"
+                          },
+                          "Custom": {
+                            "type": "textbox",
+                            "placeholder": "",
+                            "on_editing_finished": "_update_section_drawing",
+                            "on_change_compute": {
+                              "function": "_compute_welded_section_properties"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.bottom_flange_thickness",
+                        "label": "Bottom Flange Thickness, b<sub>ft</sub> (mm):",
+                        "type": "adaptive",
+                        "controller": "geometry.design_mode",
+                        "modes": {
+                          "Optimized": {
+                            "type": "all_custom",
+                            "on_selected": "_on_all_custom_selected"
+                          },
+                          "Custom": {
+                            "type": "combobox",
+                            "choices": [
+                              "8",
+                              "10",
+                              "12",
+                              "14",
+                              "16",
+                              "18",
+                              "20",
+                              "22",
+                              "25",
+                              "28",
+                              "32",
+                              "36",
+                              "40",
+                              "45",
+                              "50",
+                              "56",
+                              "63",
+                              "75",
+                              "80",
+                              "90",
+                              "100",
+                              "110",
+                              "120"
+                            ],
+                            "on_change": "_update_section_drawing",
+                            "on_change_compute": {
+                              "function": "_compute_welded_section_properties"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.web_thickness",
+                        "label": "Web Thickness, w<sub>t</sub> (mm):",
+                        "type": "adaptive",
+                        "controller": "geometry.design_mode",
+                        "modes": {
+                          "Optimized": {
+                            "type": "all_custom",
+                            "on_selected": "_on_all_custom_selected"
+                          },
+                          "Custom": {
+                            "type": "combobox",
+                            "choices": [
+                              "8",
+                              "10",
+                              "12",
+                              "14",
+                              "16",
+                              "18",
+                              "20",
+                              "22",
+                              "25",
+                              "28",
+                              "32",
+                              "36",
+                              "40",
+                              "45",
+                              "50",
+                              "56",
+                              "63",
+                              "75",
+                              "80",
+                              "90",
+                              "100",
+                              "110",
+                              "120"
+                            ],
+                            "on_change": "_update_section_drawing",
+                            "on_change_compute": {
+                              "function": "_compute_welded_section_properties"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_inputs.support_type",
+                        "label": "Support Type:",
+                        "type": "combobox",
+                        "choices": [
+                          "Major Laterally Supported",
+                          "Minor Laterally Unsupported",
+                          "Major Laterally Unsupported"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_inputs.support_width",
+                        "label": "Support Width (mm):",
+                        "type": "textbox"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.is_section",
+                        "label": "IS Section:",
+                        "type": "combobox",
+                        "choices": [],
+                        "on_change": "_update_section_drawing",
+                        "on_change_compute": {
+                          "function": "_compute_rolled_section_properties"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.torsional_restraint",
+                        "label": "Torsional Restraint:",
+                        "type": "combobox",
+                        "choices": [
+                          "Fully Restrained",
+                          "Partially Restrained - Support Connection",
+                          "Partially Restrained - Bearing Support"
+                        ],
+                        "on_change": "_on_torsional_restraint_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.warping_restraint",
+                        "label": "Warping Restraint:",
+                        "type": "combobox",
+                        "choices": [
+                          "Both Flanges Restrained",
+                          "No Restraint"
+                        ],
+                        "on_change": "_on_warping_restraint_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_input.web_type",
+                        "label": "Web Type:",
+                        "type": "combobox",
+                        "choices": [
+                          "Thin Web with ITS",
+                          "Thick Web without ITS"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "",
+                "id": "member_properties.girder_details.section_drawing",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_preview",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "Section Properties",
+                "id": "member_properties.girder_details.section_properties",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_properties.mass",
+                        "label": "Mass, M (Kg/m)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_properties.area",
+                        "label": "Sectional Area, a (m<sup>2</sup>)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_properties.iz",
+                        "label": "2nd Moment of Area, I<sub>z</sub> (m<sup>4</sup>)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_properties.iy",
+                        "label": "2nd Moment of Area, I<sub>y</sub> (m<sup>4</sup>)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_properties.radius_gyration_z",
+                        "label": "Radius of Gyration, r<sub>z</sub> (m)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_properties.radius_gyration_y",
+                        "label": "Radius of Gyration, r<sub>y</sub> (m)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.material_properties.modulus_of_elasticity_zz",
+                        "label": "Elastic Modulus, Z<sub>z</sub> (m<sup>3</sup>)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.material_properties.modulus_of_elasticity_zy",
+                        "label": "Elastic Modulus, Z<sub>y</sub> (m<sup>3</sup>)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.material_properties.plastic_modulus_zuz",
+                        "label": "Plastic Modulus, Z<sub>pz</sub> (m<sup>3</sup>)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.material_properties.plastic_modulus_zuy",
+                        "label": "Plastic Modulus, Z<sub>py</sub> (m<sup>3</sup>)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_properties.torsion_constant_it",
+                        "label": "Torsion Constant, I<sub>t</sub> (m<sup>4</sup>)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.girder_details.section_properties.warping_constant_iw",
+                        "label": "Warping Constant, I<sub>w</sub> (m<sup>6</sup>)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Stiffener Details",
+          "schema": {
+            "id": "member_properties.stiffener_details",
+            "layout": {
+              "type": "columns",
+              "columns": 2,
+              "column_widths": [
+                2,
+                3
+              ]
+            },
+            "sections": [
+              {
+                "column": 0,
+                "col_span": 2,
+                "title": "",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.stiffener_details_cad",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.select_member_id",
+                        "label": "Select Member ID:",
+                        "type": "combobox",
+                        "choices": [],
+                        "on_change": "_on_stiffener_member_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.apply_all_btn",
+                        "type": "button",
+                        "text": "Apply changes to all custom",
+                        "on_click": "_on_stiffener_apply_all_clicked"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "row_span": 3,
+                "type": "description",
+                "title": "Stiffener Details",
+                "text": "Bearing Stiffeners:\nProvided at support locations to transfer reaction forces into the web. Number and spacing are configurable per member end.\n\nIntermediate Stiffeners:\nUsed to improve shear resistance of slender webs. Enable and specify spacing when required.\n\nLongitudinal Stiffeners:\nReduce web slenderness for heavily loaded girders. One or two levels can be added at 1/3 depth intervals.\n\nWeb Buckling:\nSelect between Simple Post Critical and Tension Field methods per IRC/IS code requirements.",
+                "stretch": true
+              },
+              {
+                "column": 0,
+                "title": "Stiffener Inputs",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.no_bearing_stiffeners_each_end",
+                        "label": "No. of Bearing Stiffeners<br>(on one side only):",
+                        "type": "combobox",
+                        "choices": [
+                          "1",
+                          "2",
+                          "3",
+                          "4"
+                        ],
+                        "on_change": "_on_bearing_stiffener_count_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.bearing_stiffener_spacing",
+                        "label": "Bearing Stiffener Spacing (mm):",
+                        "type": "textbox",
+                        "on_editing_finished": "_update_stiffener_cad"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.bearing_stiffener_plate_thickness",
+                        "label": "Bearing Stiffener Thickness (mm):",
+                        "type": "combobox",
+                        "choices": [
+                          "8",
+                          "10",
+                          "12",
+                          "14",
+                          "16",
+                          "18",
+                          "20",
+                          "22",
+                          "25",
+                          "28",
+                          "32",
+                          "36",
+                          "40",
+                          "45",
+                          "50",
+                          "56",
+                          "63",
+                          "75",
+                          "80",
+                          "90",
+                          "100",
+                          "110",
+                          "120"
+                        ],
+                        "on_change": "_update_stiffener_cad"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.bearing_stiffener_outstand",
+                        "label": "Outstand of Bearing Stiffener (mm):",
+                        "type": "textbox",
+                        "on_editing_finished": "_update_stiffener_cad"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.intermediate_stiffener",
+                        "label": "Intermediate Stiffener:",
+                        "type": "combobox",
+                        "choices": [
+                          "No",
+                          "Yes"
+                        ],
+                        "on_change": "_on_intermediate_stiffener_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.intermediate_stiffener_spacing",
+                        "label": "Intermediate Stiffener Spacing (mm):",
+                        "type": "textbox",
+                        "on_editing_finished": "_update_stiffener_cad"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.intermediate_stiffener_thickness",
+                        "label": "Intermediate Stiffener Thickness (mm):",
+                        "type": "combobox",
+                        "choices": [
+                          "8",
+                          "10",
+                          "12",
+                          "14",
+                          "16",
+                          "18",
+                          "20",
+                          "22",
+                          "25",
+                          "28",
+                          "32",
+                          "36",
+                          "40",
+                          "45",
+                          "50",
+                          "56",
+                          "63",
+                          "75",
+                          "80",
+                          "90",
+                          "100",
+                          "110",
+                          "120"
+                        ],
+                        "on_change": "_update_stiffener_cad"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.intermediate_stiffener_outstand",
+                        "label": "Outstand of Intermediate Stiffener (mm):",
+                        "type": "textbox",
+                        "on_editing_finished": "_update_stiffener_cad"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.longitudinal_stiffener",
+                        "label": "Longitudinal Stiffener:",
+                        "type": "combobox",
+                        "choices": [
+                          "No",
+                          "Yes and 1 stiffener",
+                          "Yes and 2 stiffeners"
+                        ],
+                        "on_change": "_on_longitudinal_stiffener_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.longitudinal_stiffener_thickness",
+                        "label": "Longitudinal Stiffener Thickness (mm):",
+                        "type": "combobox",
+                        "choices": [
+                          "8",
+                          "10",
+                          "12",
+                          "14",
+                          "16",
+                          "18",
+                          "20",
+                          "22",
+                          "25",
+                          "28",
+                          "32",
+                          "36",
+                          "40",
+                          "45",
+                          "50",
+                          "56",
+                          "63",
+                          "75",
+                          "80",
+                          "90",
+                          "100",
+                          "110",
+                          "120"
+                        ],
+                        "on_change": "_update_stiffener_cad"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "Web Buckling Details",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.stiffener_details.design_method",
+                        "label": "Shear Buckling Design Method:",
+                        "type": "combobox",
+                        "choices": [
+                          "Simple Post Critical",
+                          "Tension Field"
+                        ],
+                        "on_change": "_update_stiffener_cad"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Cross-Bracing Details",
+          "schema": {
+            "id": "member_properties.cross_bracing_details",
+            "layout": {
+              "type": "columns",
+              "columns": 2,
+              "column_widths": [
+                3,
+                2
+              ]
+            },
+            "sections": [
+              {
+                "column": 0,
+                "title": "",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.select_girders",
+                        "label": "Select Girders:",
+                        "type": "combobox",
+                        "choices": []
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.no_of_cross_bracings",
+                        "label": "No. of Cross Bracings:",
+                        "type": "textbox"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.member_id",
+                        "label": "Member ID:",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "Section Inputs",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.type",
+                        "label": "Type of Bracing:",
+                        "type": "combobox",
+                        "choices": [
+                          "K-Bracing",
+                          "X-Bracing"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.bracing_connection",
+                        "label": "Type of Connection:",
+                        "type": "combobox",
+                        "choices": [
+                          "Bolted",
+                          "Welded"
+                        ],
+                        "enabled_choices": [
+                          "Bolted"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.bracing_section_type",
+                        "label": "Bracing Section Type:",
+                        "type": "combobox",
+                        "choices": [
+                          "Angle",
+                          "Double Angle (Long Leg)",
+                          "Double Angle (Short Leg)",
+                          "Channel",
+                          "Double Channel"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.bracing_section_designation",
+                        "label": "Bracing Section Designation:",
+                        "type": "combobox",
+                        "choices": []
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.top_chord",
+                        "label": "Top Chord",
+                        "type": "checkbox",
+                        "label_first": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.top_chord_section_type",
+                        "label": "  Top Chord Section Type:",
+                        "type": "combobox",
+                        "choices": [
+                          "Angle",
+                          "Double Angle (Long Leg)",
+                          "Double Angle (Short Leg)",
+                          "Channel",
+                          "Double Channel"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.top_chord_section_designation",
+                        "label": "  Top Chord Section Designation:",
+                        "type": "combobox",
+                        "choices": []
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.bottom_chord",
+                        "label": "Bottom Chord",
+                        "type": "checkbox",
+                        "label_first": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.bottom_chord_section_type",
+                        "label": "  Bottom Chord Section Type:",
+                        "type": "combobox",
+                        "choices": [
+                          "Angle",
+                          "Double Angle (Long Leg)",
+                          "Double Angle (Short Leg)",
+                          "Channel",
+                          "Double Channel"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.bottom_chord_section_designation",
+                        "label": "  Bottom Chord Section Designation:",
+                        "type": "combobox",
+                        "choices": []
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.spacing",
+                        "label": "Spacing (m):",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "Type of Bracing",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.layout_cad",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "Bracing",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.bracing_preview",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "id": "member_properties.cross_bracing_details.top_chord_preview_section",
+                "title": "Top Chord",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.top_chord_preview",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "id": "member_properties.cross_bracing_details.bottom_chord_preview_section",
+                "title": "Bottom Chord",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.cross_bracing_details.bottom_chord_preview",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "End Diaphragm Details",
+          "schema": {
+            "id": "member_properties.end_diaphragm_details",
+            "layout": {
+              "type": "columns",
+              "columns": 2,
+              "column_widths": [
+                3,
+                2
+              ]
+            },
+            "sections": [
+              {
+                "column": 0,
+                "title": "",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.select_girders",
+                        "label": "Select Girders:",
+                        "type": "combobox",
+                        "choices": []
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.member_id",
+                        "label": "Member ID:",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "Section Inputs",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.type",
+                        "label": "Type:",
+                        "type": "combobox",
+                        "choices": [
+                          "Cross Bracing",
+                          "Rolled Beam",
+                          "Welded Beam"
+                        ],
+                        "enabled_choices": [
+                          "Cross Bracing"
+                        ],
+                        "on_change": "_on_end_diaphragm_type_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bracing_type",
+                        "label": "Type of Bracing:",
+                        "type": "combobox",
+                        "choices": [
+                          "K-Bracing",
+                          "X-Bracing"
+                        ],
+                        "on_change": "_on_ed_bracing_layout_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bracing_connection",
+                        "label": "Type of Connection:",
+                        "type": "combobox",
+                        "choices": [
+                          "Bolted",
+                          "Welded"
+                        ],
+                        "enabled_choices": [
+                          "Bolted"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bracing_section",
+                        "label": "Bracing Section Type:",
+                        "type": "combobox",
+                        "choices": [
+                          "Angle",
+                          "Double Angle (Long Leg)",
+                          "Double Angle (Short Leg)",
+                          "Channel",
+                          "Double Channel"
+                        ],
+                        "on_change": "_on_ed_bracing_section_type_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bracing_section_designation",
+                        "label": "Bracing Section Designation:",
+                        "type": "combobox",
+                        "choices": [],
+                        "on_change": "_on_ed_bracing_preview_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.top_chord",
+                        "label": "Top Chord",
+                        "type": "checkbox",
+                        "label_first": true,
+                        "on_change": "_on_ed_bracing_layout_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.top_chord_section_type",
+                        "label": "  Top Chord Section Type:",
+                        "type": "combobox",
+                        "choices": [
+                          "Angle",
+                          "Double Angle (Long Leg)",
+                          "Double Angle (Short Leg)",
+                          "Channel",
+                          "Double Channel"
+                        ],
+                        "on_change": "_on_ed_top_chord_section_type_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.top_chord_section_designation",
+                        "label": "  Top Chord Section Designation:",
+                        "type": "combobox",
+                        "choices": [],
+                        "on_change": "_on_ed_top_chord_preview_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bottom_chord",
+                        "label": "Bottom Chord",
+                        "type": "checkbox",
+                        "label_first": true,
+                        "on_change": "_on_ed_bracing_layout_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bottom_chord_section_type",
+                        "label": "  Bottom Chord Section Type:",
+                        "type": "combobox",
+                        "choices": [
+                          "Angle",
+                          "Double Angle (Long Leg)",
+                          "Double Angle (Short Leg)",
+                          "Channel",
+                          "Double Channel"
+                        ],
+                        "on_change": "_on_ed_bottom_chord_section_type_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bottom_chord_section_designation",
+                        "label": "  Bottom Chord Section Designation:",
+                        "type": "combobox",
+                        "choices": [],
+                        "on_change": "_on_ed_bottom_chord_preview_changed"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.is_section",
+                        "label": "IS Section:",
+                        "type": "combobox",
+                        "choices": [],
+                        "on_change": "_update_ed_section_drawing",
+                        "on_change_compute": {
+                          "function": "_compute_ed_rolled_section_properties"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.symmetry",
+                        "label": "Symmetry:",
+                        "type": "combobox",
+                        "choices": [
+                          "Girder Symmetric",
+                          "Girder Unsymmetric"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.total_depth",
+                        "label": "Total Depth, d (mm):",
+                        "type": "textbox",
+                        "on_editing_finished": "_update_ed_section_drawing",
+                        "on_change_compute": {
+                          "function": "_compute_ed_welded_section_properties"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.web_thickness",
+                        "label": "Web Thickness, w<sub>t</sub> (mm):",
+                        "type": "combobox",
+                        "choices": [
+                          "8",
+                          "10",
+                          "12",
+                          "14",
+                          "16",
+                          "18",
+                          "20",
+                          "22",
+                          "25",
+                          "28",
+                          "32",
+                          "36",
+                          "40",
+                          "45",
+                          "50",
+                          "56",
+                          "63",
+                          "75",
+                          "80",
+                          "90",
+                          "100",
+                          "110",
+                          "120"
+                        ],
+                        "on_change": "_update_ed_section_drawing",
+                        "on_change_compute": {
+                          "function": "_compute_ed_welded_section_properties"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.top_flange_width",
+                        "label": "Width of Top Flange, t<sub>fw</sub> (mm):",
+                        "type": "textbox",
+                        "on_editing_finished": "_update_ed_section_drawing",
+                        "on_change_compute": {
+                          "function": "_compute_ed_welded_section_properties"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.top_flange_thickness",
+                        "label": "Top Flange Thickness, t<sub>ft</sub> (mm):",
+                        "type": "combobox",
+                        "choices": [
+                          "8",
+                          "10",
+                          "12",
+                          "14",
+                          "16",
+                          "18",
+                          "20",
+                          "22",
+                          "25",
+                          "28",
+                          "32",
+                          "36",
+                          "40",
+                          "45",
+                          "50",
+                          "56",
+                          "63",
+                          "75",
+                          "80",
+                          "90",
+                          "100",
+                          "110",
+                          "120"
+                        ],
+                        "on_change": "_update_ed_section_drawing",
+                        "on_change_compute": {
+                          "function": "_compute_ed_welded_section_properties"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bottom_flange_width",
+                        "label": "Width of Bottom Flange, b<sub>fw</sub> (mm):",
+                        "type": "textbox",
+                        "on_editing_finished": "_update_ed_section_drawing",
+                        "on_change_compute": {
+                          "function": "_compute_ed_welded_section_properties"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bottom_flange_thickness",
+                        "label": "Bottom Flange Thickness, b<sub>ft</sub> (mm):",
+                        "type": "combobox",
+                        "choices": [
+                          "8",
+                          "10",
+                          "12",
+                          "14",
+                          "16",
+                          "18",
+                          "20",
+                          "22",
+                          "25",
+                          "28",
+                          "32",
+                          "36",
+                          "40",
+                          "45",
+                          "50",
+                          "56",
+                          "63",
+                          "75",
+                          "80",
+                          "90",
+                          "100",
+                          "110",
+                          "120"
+                        ],
+                        "on_change": "_update_ed_section_drawing",
+                        "on_change_compute": {
+                          "function": "_compute_ed_welded_section_properties"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "Type of Bracing",
+                "id": "member_properties.end_diaphragm_details.bracing_layout_section",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bracing_layout_cad",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "Bracing",
+                "id": "member_properties.end_diaphragm_details.bracing_preview_section",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bracing_section_preview",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "Top Chord",
+                "id": "member_properties.end_diaphragm_details.top_chord_preview_section",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.top_chord_preview",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "Bottom Chord",
+                "id": "member_properties.end_diaphragm_details.bottom_chord_preview_section",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.bottom_chord_preview",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "",
+                "id": "member_properties.end_diaphragm_details.rolled_preview_section",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.rolled_preview",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "",
+                "id": "member_properties.end_diaphragm_details.welded_preview_section",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.welded_preview",
+                        "type": "direct_widget_classes",
+                        "widget_class": null
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "title": "Section Properties",
+                "id": "member_properties.end_diaphragm_details.section_properties_section",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.section_properties.mass",
+                        "label": "Mass, M (Kg/m)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.section_properties.area",
+                        "label": "Sectional Area, a (cm²)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.section_properties.iz",
+                        "label": "2nd Moment of Area, Iz (cm⁴)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.section_properties.iy",
+                        "label": "2nd Moment of Area, Iy (cm⁴)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.section_properties.radius_gyration_z",
+                        "label": "Radius of Gyration, rz (cm)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.section_properties.radius_gyration_y",
+                        "label": "Radius of Gyration, ry (cm)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.material_properties.elastic_modulus_zz",
+                        "label": "Elastic Modulus, Zz (cm³)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.material_properties.elastic_modulus_zy",
+                        "label": "Elastic Modulus, Zy (cm³)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.material_properties.plastic_modulus_zuz",
+                        "label": "Plastic Modulus, Zpz (cm³)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "member_properties.end_diaphragm_details.material_properties.plastic_modulus_zuy",
+                        "label": "Plastic Modulus, Zpy (cm³)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "main_id": "member_properties.main",
+    "with_scroll": false
+  },
+  {
+    "label": "Loading",
+    "schema": {
+      "id": "loading.tab",
+      "layout": {
+        "type": "tabs"
+      },
+      "tabs": [
+        {
+          "title": "Permanent Load",
+          "schema": {
+            "id": "loading.permanent_load.tab",
+            "layout": {
+              "type": "columns",
+              "columns": 2,
+              "column_widths": [
+                3,
+                2
+              ]
+            },
+            "sections": [
+              {
+                "column": 0,
+                "title": "Dead Load (DL)",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.permanent_load.dead_load.self_weight_factor",
+                        "label": "Self-weight modification factor",
+                        "type": "textbox",
+                        "placeholder": ""
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "type": "description",
+                "title": "Permanent Loads",
+                "text": "Dead loads are divided into the following categories:\n\nSW — Self-weight of the girder. The self-weight modification factor entered by the user is multiplied with this case to account for connections and accessories not explicitly modelled.\nDC — Weight of structural steel components other than the girder, including cross bracing and end diaphragms.\nDD — Weight of the concrete deck slab.\nDW — Weight of the wearing course (surfacing) applied on the deck.\nSIDL — Superimposed Dead Load, comprising crash barriers, median, and railings.\n\nAll load magnitudes are computed internally from member dimensions and material densities. The self-weight modification factor (SW) is the only user-controlled parameter for this load group.",
+                "stretch": true
+              }
+            ]
+          }
+        },
+        {
+          "title": "Live Load",
+          "schema": {
+            "id": "loading.live_load.tab",
+            "layout": {
+              "type": "columns",
+              "columns": 2,
+              "column_widths": [
+                3,
+                2
+              ]
+            },
+            "sections": [
+              {
+                "column": 0,
+                "title": "Vehicles from IRC 6",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.live_load.irc.class_a",
+                        "label": "Class A",
+                        "type": "checkbox",
+                        "label_first": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.live_load.irc.aa_wheeled",
+                        "label": "Class AA Wheeled",
+                        "type": "checkbox",
+                        "label_first": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.live_load.irc.aa_tracked",
+                        "label": "Class AA Tracked",
+                        "type": "checkbox",
+                        "label_first": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.live_load.irc.70r_wheeled",
+                        "label": "Class 70R Wheeled",
+                        "type": "checkbox",
+                        "label_first": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.live_load.irc.70r_tracked",
+                        "label": "Class 70R Tracked",
+                        "type": "checkbox",
+                        "label_first": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.live_load.irc.70r_bogie",
+                        "label": "Class 70R Bogie",
+                        "type": "checkbox",
+                        "label_first": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.live_load.irc.class_sv",
+                        "label": "Class SV",
+                        "type": "checkbox",
+                        "label_first": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.live_load.irc.class_fatigue",
+                        "label": "Class Fatigue",
+                        "type": "checkbox",
+                        "label_first": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "Braking Load from Vehicles",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "bl_irc_class_sv",
+                        "label": "Class SV",
+                        "type": "checkbox",
+                        "default_checked": true,
+                        "label_first": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.live_load.eccentricity",
+                        "label": "Eccentricity from top of Deck (m)",
+                        "type": "textbox",
+                        "placeholder": ""
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.live_load.footpath_pressure",
+                        "label": "Footpath Pressure (kN/mm²)",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "As per IRC 6",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_on_footpath_mode_changed"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "type": "description",
+                "title": "Live Load (LL)",
+                "text": "IRC Vehicles:\nLive load considers standard IRC 6 vehicle classes: Class A, Class 70R (Wheeled, Tracked, Bogie), Class AA (Wheeled, Tracked), Class SV (Special Vehicle), and Fatigue vehicle. Only checked vehicles are included in the analysis.\n\nBraking Load (IRC 6 Cl. 211.2):\nBraking forces are derived from the live load. For single- or two-lane bridges: 20% of the first train of load plus 10% of succeeding trains in one lane.\nFor bridges with more than two lanes: as above for the first two lanes, plus 5% for each additional lane.\nClass SV does not require a braking load by default, but a checkbox is provided if the user wishes to include it.\n\nBraking Load Eccentricity:\nAs per IRC 6, braking load acts as a horizontal longitudinal force applied at 1.2 m above the top of the deck surface.\n\nFootpath Pressure:\nFootpath live load is applied as a uniform pressure per IRC 6. The default value follows the code; the user can switch to 'User-defined' to enter a custom value.",
+                "stretch": true
+              }
+            ]
+          }
+        },
+        {
+          "title": "Seismic Load",
+          "schema": {
+            "id": "loading.seismic_load.tab",
+            "layout": {
+              "type": "columns",
+              "columns": 2,
+              "column_widths": [
+                3,
+                2
+              ]
+            },
+            "sections": [
+              {
+                "column": 0,
+                "title": "Seismic/Earthquake Load (EL) Inputs",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.seismic_zone",
+                        "label": "Seismic Zone",
+                        "type": "textbox",
+                        "read_only": true,
+                        "on_change_compute": {
+                          "function": "_compute_seismic_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.importance_factor",
+                        "label": "Importance Factor, I",
+                        "type": "textbox",
+                        "placeholder": "Enter value",
+                        "on_change_compute": {
+                          "function": "_compute_seismic_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.soil_type",
+                        "label": "Type of Soil",
+                        "type": "combobox",
+                        "choices": [
+                          "Type I – Rocky or Hard",
+                          "Type II – Medium Soil",
+                          "Type III – Soft Soil"
+                        ],
+                        "on_change_compute": {
+                          "function": "_compute_seismic_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.time_period",
+                        "label": "Fundamental Time Period, T (sec)",
+                        "type": "textbox",
+                        "placeholder": "Enter value",
+                        "on_change_compute": {
+                          "function": "_compute_seismic_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.damping",
+                        "label": "Damping Percentage",
+                        "type": "textbox",
+                        "placeholder": "Enter value",
+                        "on_change_compute": {
+                          "function": "_compute_seismic_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.response_reduction_factor",
+                        "label": "Response Reduction Factor, R",
+                        "type": "combobox",
+                        "choices": [
+                          "1",
+                          "2",
+                          "3",
+                          "4",
+                          "5"
+                        ],
+                        "on_change_compute": {
+                          "function": "_compute_seismic_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.dead_load",
+                        "label": "Dead Load for Seismic Force (kN)",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "Automatic",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_on_seismic_dead_load_mode_changed",
+                        "on_change_compute": {
+                          "function": "_compute_seismic_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.live_load",
+                        "label": "Live Load for Seismic Force (kN)",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "Automatic",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_on_seismic_live_load_mode_changed",
+                        "on_change_compute": {
+                          "function": "_compute_seismic_values"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "Computed Values",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.computed.zone_factor",
+                        "label": "Zone Factor, Z",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.computed.spectral_coeff",
+                        "label": "Spectral Acceleration Coefficient, S&#x2090;/g",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.computed.horizontal_coeff",
+                        "label": "Horizontal Seismic Coefficient, A&#x2095;",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.seismic_load.computed.vertical_coeff",
+                        "label": "Vertical Seismic Coefficient, A&#x1D65;",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "type": "description",
+                "title": "Seismic / Earthquake Load (EL)",
+                "text": "Seismic zone is auto-filled from the project location and determines the zone factor (Z) per IRC 6.\n\nSpectral acceleration coefficient (Sa/g) is taken from IRC 6 response spectra and depends on the soil type and the fundamental time period (T) of the structure.\n\nSeismic coefficients:\nAh = (Z / 2) x (I / R) x (Sa/g)\nAv = (2/3) x Ah\nwhere Z = zone factor, I = importance factor, R = response reduction factor, and the damping percentage governs the Sa/g value. All calculations follow IRC 6 seismic provisions.",
+                "stretch": true
+              }
+            ]
+          },
+          "refresh": [
+            {
+              "widget_id": "loading.seismic_load.seismic_zone",
+              "path": [
+                "project.location",
+                "weather_data",
+                "zone"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Wind Load",
+          "schema": {
+            "id": "loading.wind_load.tab",
+            "scroll": false,
+            "label_width": 270,
+            "layout": {
+              "type": "columns",
+              "columns": 2,
+              "column_widths": [
+                3,
+                2
+              ]
+            },
+            "sections": [
+              {
+                "column": 0,
+                "title": "Wind Load (WL) Inputs",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.basic_wind_speed",
+                        "label": "Basic Wind Speed, V<sub>b</sub> (m/s)",
+                        "type": "textbox",
+                        "read_only": true,
+                        "on_change_compute": {
+                          "function": "_compute_wind_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.avg_exposed_height",
+                        "label": "Average Exposed Height, H (m)",
+                        "type": "textbox",
+                        "placeholder": "10",
+                        "default": "10",
+                        "on_change_compute": {
+                          "function": "_compute_wind_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.terrain_type",
+                        "label": "Type of Terrain",
+                        "type": "combobox",
+                        "choices": [
+                          "Plain Terrain",
+                          "Terrain with Obstructions"
+                        ],
+                        "default": "Plain Terrain",
+                        "on_change_compute": {
+                          "function": "_compute_wind_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.site_topography",
+                        "label": "Site Topography",
+                        "type": "combobox",
+                        "choices": [
+                          "Flat",
+                          "Hill, ridge, escarpment or cliff"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.gust_factor",
+                        "label": "Gust Factor, G",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "As per IRC 6",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_toggle_wind_custom_input"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.drag_coeff",
+                        "label": "Drag Coefficient, C<sub>D</sub>",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "As per IRC 6",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_toggle_wind_custom_input"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.drag_coeff_ll",
+                        "label": "Drag Coefficient against Live Load, C<sub>DLL</sub>",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "As per IRC 6",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_toggle_wind_custom_input"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.lift_coeff",
+                        "label": "Lift Coefficient, C<sub>L</sub>",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "As per IRC 6",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_toggle_wind_custom_input"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.super_area_elev",
+                        "label": "Superstructure Area in Elevation, A<sub>1</sub> (m²)",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "Automatic",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_toggle_wind_custom_input"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.super_area_plain",
+                        "label": "Superstructure Area in Plain, A<sub>3</sub> (m²)",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "Automatic",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_toggle_wind_custom_input"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.exposed_frontal_area",
+                        "label": "Exposed Frontal Area of Live Load, A<sub>1LL</sub> (m²)",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "Automatic",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_toggle_wind_custom_input"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.wind_ecc_deck",
+                        "label": "Wind Load Eccentricity from Top of Deck (m)",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "As per IRC 6",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_toggle_wind_custom_input"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.wind_ll_ecc",
+                        "label": "Wind on Live Load Eccentricity from Top of Deck (m)",
+                        "type": "mode_line_edit",
+                        "mode_choices": [
+                          "As per IRC 6",
+                          "Custom"
+                        ],
+                        "on_mode_change": "_toggle_wind_custom_input"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "Computed Values",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.computed.hourly_mean_wind",
+                        "label": "Hourly Mean Wind Speed, V<sub>z</sub> (m/s)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.wind_load.computed.hourly_wind_pressure",
+                        "label": "Hourly Wind Pressure, P<sub>z</sub> (N/m²)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "type": "description",
+                "title": "Wind Load (WL)",
+                "text": "Basic wind speed is auto-filled from the project location.\n\nHourly mean wind speed (Vz) and design wind pressure (Pz) are computed from the basic wind speed, average exposed height (H), terrain type, and site topography per IRC 6.\n\nWind forces computed per IRC 6 include:\n- Transverse wind force on the structure\n- Longitudinal wind force (typically 25% of transverse)\n- Vertical (upward) wind force on the deck\n- Transverse and longitudinal wind forces due to live load\n\nThese forces use the gust factor (G), drag coefficient (CD), lift coefficient (CL), superstructure elevation area, plan area, and exposed frontal area of live load. They are applied at the specified eccentricity or as required by IRC 6.",
+                "stretch": true
+              }
+            ]
+          },
+          "refresh": [
+            {
+              "widget_id": "loading.wind_load.basic_wind_speed",
+              "path": [
+                "project.location",
+                "weather_data",
+                "wind_speed"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Temperature Load",
+          "schema": {
+            "id": "loading.temperature_load.tab",
+            "layout": {
+              "type": "columns",
+              "columns": 2,
+              "column_widths": [
+                3,
+                2
+              ]
+            },
+            "sections": [
+              {
+                "column": 0,
+                "title": "Temperature Load (TL) Inputs for Evaluation per IRC6",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.temperature_load.highest_max_temp",
+                        "label": "Highest Maximum Air Temperature (°C)",
+                        "type": "textbox",
+                        "placeholder": "From Project Location",
+                        "enabled": false,
+                        "read_only": true,
+                        "on_change_compute": {
+                          "function": "_compute_temperature_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.temperature_load.lowest_min_temp",
+                        "label": "Lowest Minimum Air Temperature (°C)",
+                        "type": "textbox",
+                        "placeholder": "From Project Location",
+                        "enabled": false,
+                        "read_only": true,
+                        "on_change_compute": {
+                          "function": "_compute_temperature_values"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.temperature_load.thermal_coeff_steel",
+                        "label": "Coefficient of Thermal Expansion for Steel (1/°C)",
+                        "type": "textbox",
+                        "read_only": true,
+                        "placeholder": "e.g. 11.7e-6"
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.temperature_load.thermal_coeff_rcc",
+                        "label": "Coefficient of Thermal Expansion for RCC (1/°C)",
+                        "type": "textbox",
+                        "read_only": true,
+                        "placeholder": "e.g. 11.7e-6"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "Range of Effective Bridge Temperature",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.temperature_load.computed.bridge_temp_min",
+                        "label": "Minimum (°C)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.temperature_load.computed.bridge_temp_max",
+                        "label": "Maximum (°C)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "Temperature for Design",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.temperature_load.computed.temp_rise",
+                        "label": "Rise (°C)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  },
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.temperature_load.computed.temp_fall",
+                        "label": "Fall (°C)",
+                        "type": "textbox",
+                        "read_only": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "type": "description",
+                "title": "Temperature Load (TL)",
+                "text": "Highest maximum and lowest minimum air shade temperatures are auto-filled from the project location (per IRC 6 Annex B meteorological data).<br><br><b>Coefficient of thermal expansion (α):</b><br>Governs the unit change in length per degree Celsius. IRC 6 Cl. 215 specifies 12 × 10⁻⁶ /°C for steel and 12 × 10⁻⁶ /°C for RCC; values may be revised if site-specific material data is available. Both coefficients are user-editable.<br><br><b>Range of effective bridge temperature (EBT):</b><br>The effective bridge temperature is the uniform temperature through the depth of the bridge cross-section at any instant. The minimum and maximum EBT values are derived from the air shade temperatures using IRC 6 Cl. 215. These are computed automatically and shown read-only.<br><br><b>Temperature for design:</b><br>• Temperature Rise = Maximum EBT − Mean temperature<br>• Temperature Fall = Mean temperature − Minimum EBT<br>The Mean temperature is the midpoint of min and max air shade temperatures. The rise and fall values are used to compute thermal expansion and contraction forces, and longitudinal effects throughout the analysis.",
+                "stretch": true
+              }
+            ]
+          },
+          "refresh": [
+            {
+              "widget_id": "loading.temperature_load.highest_max_temp",
+              "path": [
+                "project.location",
+                "weather_data",
+                "max_temp"
+              ]
+            },
+            {
+              "widget_id": "loading.temperature_load.lowest_min_temp",
+              "path": [
+                "project.location",
+                "weather_data",
+                "min_temp"
+              ]
+            },
+            {
+              "widget_id": "loading.temperature_load.thermal_coeff_steel",
+              "path": [
+                "material.girder.thermal"
+              ]
+            },
+            {
+              "widget_id": "loading.temperature_load.thermal_coeff_rcc",
+              "path": [
+                "material.deck.thermal"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Custom Load",
+          "schema": {
+            "id": "custom_load_tab",
+            "label_width": 260,
+            "field_width": 140,
+            "load_case_choices": [
+              "DL",
+              "DW",
+              "SIDL",
+              "LL",
+              "EL",
+              "WL",
+              "TL",
+              "Custom"
+            ],
+            "load_type_choices": [
+              "Point",
+              "Line",
+              "Area"
+            ],
+            "fields": {
+              "load_case": {
+                "id": "custom_load_case",
+                "label": "Load Case",
+                "type": "combo"
+              },
+              "custom_load_case_name": {
+                "id": "custom_load_case_name",
+                "label": "",
+                "type": "line",
+                "placeholder": "Custom",
+                "enabled": false
+              },
+              "load_type": {
+                "id": "custom_load_type",
+                "label": "Load Type",
+                "type": "combo"
+              },
+              "point_left": {
+                "id": "custom_point_left",
+                "label": "Distance from Left Edge of Bridge (m)",
+                "type": "line",
+                "validator": {
+                  "type": "double_range",
+                  "bottom": 0.0,
+                  "top": 1000.0,
+                  "decimals": 3
+                }
+              },
+              "point_bearing": {
+                "id": "custom_point_bearing",
+                "label": "Distance from Center Line of Bearing (m)",
+                "type": "line",
+                "validator": {
+                  "type": "double_range",
+                  "bottom": -1000.0,
+                  "top": 1000.0,
+                  "decimals": 3
+                }
+              },
+              "line_left_start": {
+                "id": "custom_line_left_start",
+                "label": "Distance from Left Edge of Bridge (m):",
+                "sub_label": "Start",
+                "type": "line",
+                "field_width": 70,
+                "validator": {
+                  "type": "double_range",
+                  "bottom": 0.0,
+                  "top": 1000.0,
+                  "decimals": 3
+                }
+              },
+              "line_left_end": {
+                "id": "custom_line_left_end",
+                "sub_label": "End",
+                "type": "line",
+                "field_width": 70,
+                "validator": {
+                  "type": "double_range",
+                  "bottom": 0.0,
+                  "top": 1000.0,
+                  "decimals": 3
+                }
+              },
+              "line_bearing_start": {
+                "id": "custom_line_bearing_start",
+                "label": "Distance from Center Line of Bearing (m):",
+                "sub_label": "Start",
+                "type": "line",
+                "field_width": 70,
+                "validator": {
+                  "type": "double_range",
+                  "bottom": -1000.0,
+                  "top": 1000.0,
+                  "decimals": 3
+                }
+              },
+              "line_bearing_end": {
+                "id": "custom_line_bearing_end",
+                "sub_label": "End",
+                "type": "line",
+                "field_width": 70,
+                "validator": {
+                  "type": "double_range",
+                  "bottom": -1000.0,
+                  "top": 1000.0,
+                  "decimals": 3
+                }
+              }
+            }
+          },
+          "disable": true
+        },
+        {
+          "title": "Load Combination",
+          "schema": {
+            "id": "loading.load_combination.tab",
+            "scroll": false,
+            "layout": {
+              "type": "columns",
+              "columns": 2,
+              "column_widths": [
+                3,
+                2
+              ]
+            },
+            "sections": [
+              {
+                "column": 0,
+                "title": "Load Combinations from IRC 6",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "irc6_default_combinations",
+                        "type": "load_combination"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 0,
+                "title": "",
+                "rows": [
+                  {
+                    "fields": [
+                      {
+                        "id": "loading.load_combination.combinations",
+                        "type": "load_combination",
+                        "on_click": "_on_add_custom_combination"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "column": 1,
+                "type": "description",
+                "title": "Load Combinations (IRC 6)",
+                "text": "Load combinations are formed per IRC 6 Table B.1. The following load cases are considered:\nSW: Self-weight of steel girder\nDC: Weight of structural steel components other than the girder, including cross bracing and end diaphragms\nDD: Deck weight\nDW: Wearing course\nSIDL: Crash barriers, median, railing\nLL: Live load\nWL: Wind load\nEL: Seismic / earthquake load\nTL: Temperature load\n\nIRC 6 combination types:\n- Basic combination\n- Accidental combination\n- Seismic combination\n- Frequent combination\n- Rare combination\n- Quasi-permanent combination\n\nCustom load combinations with user-defined partial safety factors can also be added.",
+                "stretch": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "main_id": "loading.main",
+    "with_scroll": false
+  },
+  {
+    "label": "Analysis/Design Options",
+    "schema": {
+      "id": "design_options.tab",
+      "layout": {
+        "type": "columns",
+        "columns": 2,
+        "column_widths": [
+          3,
+          2
+        ]
+      },
+      "sections": [
+        {
+          "column": 0,
+          "title": "Construction Stages",
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "design_options.construction.stage",
+                  "label": "Include default",
+                  "type": "combobox",
+                  "choices": [
+                    "Yes",
+                    "No"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "column": 0,
+          "title": "Deck Design",
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "design_options.deck.reinforcement_bounds",
+                  "label": "Reinforcement Size",
+                  "type": "bounds_dialog_btn",
+                  "text": "Set Bounds",
+                  "with_increment": false,
+                  "lower_limit": 8.0,
+                  "upper_limit": 40.0
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options.deck.reinforcement_material",
+                  "label": "Reinforcement Material",
+                  "type": "combobox",
+                  "choices": [
+                    "Fe 415",
+                    "Fe 415D",
+                    "Fe 500",
+                    "Fe 500D",
+                    "Fe 550",
+                    "Fe 550D",
+                    "Fe 600"
+                  ]
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options.deck.top_clear_cover",
+                  "label": "Top Clear Cover (mm)",
+                  "type": "textbox",
+                  "placeholder": "40 - 75"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options.deck.bottom_clear_cover",
+                  "label": "Bottom Clear Cover (mm)",
+                  "type": "textbox",
+                  "placeholder": "35 - 75"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options.deck.side_clear_cover",
+                  "label": "Side Clear Cover (mm)",
+                  "type": "textbox",
+                  "placeholder": "35 - 75"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "column": 0,
+          "title": "Shear Studs",
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "design_options.shear_studs.yield_strength",
+                  "label": "Yield Strength (MPa)",
+                  "type": "textbox",
+                  "placeholder": "350 - 600"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options.shear_studs.ultimate_strength",
+                  "label": "Ultimate Strength (MPa)",
+                  "type": "textbox",
+                  "placeholder": "350 - 600"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options.shear_studs.diameter",
+                  "label": "Diameter (mm)",
+                  "type": "combobox",
+                  "choices": [
+                    "12",
+                    "16",
+                    "20",
+                    "22",
+                    "25"
+                  ]
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options.shear_studs.height",
+                  "label": "Height (mm)",
+                  "type": "textbox"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options.shear_studs.count",
+                  "label": "No. of Shear Studs per Section",
+                  "type": "combobox",
+                  "choices": [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7",
+                    "8",
+                    "9",
+                    "10"
+                  ]
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options.shear_studs.transverse_spacing",
+                  "label": "Transverse Spacing (mm)",
+                  "type": "textbox"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "column": 1,
+          "type": "description",
+          "title": "Construction Stages",
+          "text": "When included ('Yes'), the analysis accounts for three stages.\nIn Stage 1, the steel girder carries its self-weight alone.\nIn Stage 2, the wet concrete deck load (DD) and the weight of other structural steel components act on the bare steel section before composite action is activated.\nIn Stage 3, composite action is fully active, and all remaining loads (superimposed dead load, live load, wind load, seismic load, and temperature load) are applied to the composite section.\nStages 1 and 2 are critical for lateral-torsional buckling (LTB) checks, as the compression flange is unrestrained until the deck provides lateral support.\n\nWhen 'No' is selected, only the final composite state is checked and no separate construction-stage verification is performed.",
+          "stretch": true
+        }
+      ]
+    },
+    "main_id": "design_options.main",
+    "with_scroll": true
+  },
+  {
+    "label": "Design Options (Cont.)",
+    "schema": {
+      "id": "design_options_cont.tab",
+      "layout": {
+        "type": "columns",
+        "columns": 2,
+        "column_widths": [
+          3,
+          2
+        ]
+      },
+      "sections": [
+        {
+          "column": 0,
+          "title": "Partial Factor",
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "design_options_cont.partial_factor.concrete_basic.gamma_c_basic",
+                  "label": "Concrete basic & seismic, &#947;<sub>c</sub>",
+                  "type": "textbox",
+                  "placeholder": "1.0 - 2.0"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options_cont.partial_factor.concrete_accidental.gamma_c_accidental",
+                  "label": "Concrete Accidental, &#947;<sub>c</sub>",
+                  "type": "textbox",
+                  "placeholder": "1.0 - 2.0"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options_cont.partial_factor.yielding_and_buckling.gamma_m0",
+                  "label": "Structural steel for Yielding and Buckling, &#947;<sub>M0</sub>",
+                  "type": "textbox",
+                  "placeholder": "1.0 - 2.0"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options_cont.partial_factor.ultimate_stress.gamma_m1",
+                  "label": "Structural Steel For Ultimate Stress, &#947;<sub>M1</sub>",
+                  "type": "textbox",
+                  "placeholder": "1.0 - 2.0"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options_cont.partial_factor.reinforcing_steel.gamma_s",
+                  "label": "Reinforcing Steel, &#947;<sub>s</sub>",
+                  "type": "textbox",
+                  "placeholder": "1.0 - 2.0"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options_cont.partial_factor.shear_connectors.gamma_v",
+                  "label": "Shear Connectors For Yield, &#947;<sub>v</sub>",
+                  "type": "textbox",
+                  "placeholder": "1.0 - 2.0"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options_cont.partial_factor.fatigue_load.gamma_flt",
+                  "label": "Fatigue Load, &#947;<sub>flt</sub>",
+                  "type": "textbox",
+                  "placeholder": "1.0 - 2.0"
+                }
+              ]
+            },
+            {
+              "fields": [
+                {
+                  "id": "design_options_cont.partial_factor.fatigue_strength.gamma_mf",
+                  "label": "Fatigue Strength, &#947;<sub>Mf,t</sub>",
+                  "type": "textbox",
+                  "placeholder": "1.0 - 2.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "column": 1,
+          "type": "description",
+          "title": "Design Options",
+          "row_span": 3,
+          "text": "Deflection limit considered for live load case is L/800 and for DL+LL case is L/600 per IRC 6."
+        },
+        {
+          "column": 0,
+          "title": "Resistance to Fatigue",
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "design_options_cont.fatigue.load_cycles",
+                  "label": "Number of Load Cycles",
+                  "type": "textbox",
+                  "placeholder": "100000 - 100000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "column": 0,
+          "title": "Deflection Control",
+          "rows": [
+            {
+              "fields": [
+                {
+                  "id": "design_options_cont.camber",
+                  "label": "Camber (m)",
+                  "type": "mode_line_edit",
+                  "mode_choices": [
+                    "Default",
+                    "Custom"
+                  ],
+                  "bind_mode": "camber_mode_combo",
+                  "bind_value": "camber_value_input",
+                  "placeholder": "0 - 4"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "column": 0,
+          "col_span": 2,
+          "title": "Limit States",
+          "checkbox_groups": [
+            {
+              "title": "Ultimate Limit States",
+              "default_checked": true,
+              "items": [
+                {
+                  "id": "design_options_cont.uls.bending_resistance",
+                  "label": "Bending Resistance",
+                  "type": "checkbox"
+                },
+                {
+                  "id": "design_options_cont.uls.vertical_shear",
+                  "label": "Resistance to Vertical Shear",
+                  "type": "checkbox"
+                },
+                {
+                  "id": "design_options_cont.uls.lateral_torsional_buckling",
+                  "label": "Resistance to Lateral-torsional Buckling",
+                  "type": "checkbox"
+                },
+                {
+                  "id": "design_options_cont.uls.transverse_force",
+                  "label": "Resistance to Transverse force",
+                  "type": "checkbox"
+                },
+                {
+                  "id": "design_options_cont.uls.longitudinal_shear",
+                  "label": "Resistance to Longitudinal Shear",
+                  "type": "checkbox"
+                },
+                {
+                  "id": "design_options_cont.uls.fatigue",
+                  "label": "Resistance to Fatigue",
+                  "type": "checkbox"
+                }
+              ]
+            },
+            {
+              "title": "Serviceability Limit States",
+              "default_checked": true,
+              "items": [
+                {
+                  "id": "design_options_cont.sls.stress_limitation",
+                  "label": "Stress Limitation",
+                  "type": "checkbox"
+                },
+                {
+                  "id": "design_options_cont.sls.longitudinal_shear",
+                  "label": "Longitudinal Shear (SLS)",
+                  "type": "checkbox"
+                },
+                {
+                  "id": "design_options_cont.sls.deflection_control",
+                  "label": "Deflection Control",
+                  "type": "checkbox"
+                },
+                {
+                  "id": "design_options_cont.sls.crack_width",
+                  "label": "Crack Width Check",
+                  "type": "checkbox"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "main_id": "design_options_cont.main",
+    "with_scroll": true
+  }
+]
