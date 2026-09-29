@@ -1,13 +1,6 @@
 from fastapi import APIRouter
 from typing import List
 from app.models.schemas import UIFieldSchema
-import sys
-from pathlib import Path
-
-# Add core src to path if running side-by-side with OsdagBridge
-CORE_DIR = Path(__file__).resolve().parents[5] / "OsdagBridge" / "src"
-if CORE_DIR.exists() and str(CORE_DIR) not in sys.path:
-    sys.path.insert(0, str(CORE_DIR))
 
 router = APIRouter(prefix="/schema", tags=["Schema"])
 
@@ -116,14 +109,10 @@ BASE_SCHEMA: List[UIFieldSchema] = [
 ]
 
 @router.get("/basic", response_model=List[UIFieldSchema])
+@router.get("", response_model=List[UIFieldSchema])
 def get_basic_input_schema():
     """
     Returns the schema-driven definition of input fields for the Input Dock.
     TODO: Dynamically serialize from ui_fields.py
     """
-    try:
-        from osdagbridge.core.bridge_types.plate_girder.ui_fields import FrontendData
-        # When core is linked, dynamic values can be serialized here
-    except ImportError:
-        pass
     return BASE_SCHEMA

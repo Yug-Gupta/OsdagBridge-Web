@@ -1,42 +1,25 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 from app.models.schemas import LocationStateResponse, LocationStationResponse, LocationDataResponse
-import sys
-from pathlib import Path
-
-CORE_DIR = Path(__file__).resolve().parents[5] / "OsdagBridge" / "src"
-if CORE_DIR.exists() and str(CORE_DIR) not in sys.path:
-    sys.path.insert(0, str(CORE_DIR))
 
 router = APIRouter(prefix="/location", tags=["Project Location"])
 
 @router.get("/states", response_model=LocationStateResponse)
 def get_states():
-    """Returns list of all Indian states from weather database."""
-    try:
-        from osdagbridge.core.bridge_types.plate_girder.ui_fields_project_location import get_state_list
-        states = get_state_list(include_placeholder=False)
-        return LocationStateResponse(states=states)
-    except Exception:
-        # Fallback list for offline demo
-        return LocationStateResponse(states=[
-            "Maharashtra", "Gujarat", "Karnataka", "Tamil Nadu", "Delhi", "Punjab", "Rajasthan", "Uttar Pradesh"
-        ])
+    """Returns the web API's built-in state list."""
+    return LocationStateResponse(states=[
+        "Maharashtra", "Gujarat", "Karnataka", "Tamil Nadu", "Delhi", "Punjab", "Rajasthan", "Uttar Pradesh"
+    ])
 
 @router.get("/stations", response_model=LocationStationResponse)
 def get_stations(state: str = Query(..., description="Name of the State")):
     """Returns stations/districts for the selected state."""
-    try:
-        from osdagbridge.core.bridge_types.plate_girder.ui_fields_project_location import get_station_list
-        stations = get_station_list(state=state, include_placeholder=False)
-        return LocationStationResponse(state=state, stations=stations)
-    except Exception:
-        fallback = {
-            "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"],
-            "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot"],
-            "Karnataka": ["Bengaluru", "Mysuru", "Hubli", "Mangalore"],
-            "Delhi": ["New Delhi", "North Delhi", "South Delhi"]
-        }
-        return LocationStationResponse(state=state, stations=fallback.get(state, ["City Center"]))
+    stations_by_state = {
+        "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"],
+        "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot"],
+        "Karnataka": ["Bengaluru", "Mysuru", "Hubli", "Mangalore"],
+        "Delhi": ["New Delhi", "North Delhi", "South Delhi"]
+    }
+    return LocationStationResponse(state=state, stations=stations_by_state.get(state, ["City Center"]))
 
 @router.get("/details", response_model=LocationDataResponse)
 def get_location_details(state: str = Query(...), station: str = Query(...)):

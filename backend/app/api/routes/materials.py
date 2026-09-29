@@ -5,8 +5,7 @@ from fastapi import APIRouter
 router = APIRouter(prefix="/materials", tags=["Materials"])
 
 def _locate_resource_file(file_name: str) -> Path:
-    # Go up from web/backend/app/api/routes/materials.py to root
-    root_dir = Path(__file__).resolve().parents[5]
+    root_dir = Path(__file__).resolve().parents[4]
     return root_dir / "src" / "osdagbridge" / "core" / "data" / "ResourceFiles" / file_name
 
 def _execute_resource_query(query: str):
@@ -79,3 +78,21 @@ def get_material_base_values():
         "steel": _load_steel_material_values_from_db(),
         "concrete": _load_concrete_grade_values_from_db()
     }
+
+
+@router.get("/steel")
+def get_steel_materials():
+    values = _load_steel_material_values_from_db()
+    return [
+        {"name": name, "fy": properties["Fy"], "fu": properties["Fu"]}
+        for name, properties in values.items()
+    ]
+
+
+@router.get("/concrete")
+def get_concrete_materials():
+    values = _load_concrete_grade_values_from_db()
+    return [
+        {"grade": grade, "fck": properties["fck"], "Ecm": properties["Ecm"]}
+        for grade, properties in values.items()
+    ]
