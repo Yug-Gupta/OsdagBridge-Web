@@ -1,9 +1,9 @@
 import React from 'react';
 import { useBridgeStore, type CadComponentVisibility } from '../../store/useBridgeStore';
-import type { BridgeCadParameters } from '../../types/bridgeGeometry';
+import type { ViewerCadModel } from '../../types/viewerCadModel';
 
 interface BridgeComponentSelectorProps {
-  params: BridgeCadParameters;
+  params: ViewerCadModel;
 }
 
 export const BridgeComponentSelector: React.FC<BridgeComponentSelectorProps> = ({ params }) => {

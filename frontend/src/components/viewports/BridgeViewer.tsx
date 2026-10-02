@@ -11,7 +11,7 @@ import {
 } from '@react-three/drei';
 import * as THREE from 'three';
 import { useBridgeStore, type CadDisplayState } from '../../store/useBridgeStore';
-import type { BridgeCadParameters } from '../../types/bridgeGeometry';
+import type { ViewerCadModel } from '../../types/viewerCadModel';
 import { CrashBarrierGeometry, MedianGeometry, RailingGeometry } from '../../utils/irc5Geometry';
 
 /**
@@ -145,7 +145,7 @@ function PlateGirderAssembly({
   girderIdx: number;
   xOffset: number; // longitudinal skew shift (m)
   yOffset: number; // lateral coordinate (m)
-  p: BridgeCadParameters;
+  p: ViewerCadModel;
   onHover: (e: any, text: string) => void;
   onLeave: () => void;
 }) {
@@ -498,7 +498,7 @@ function CrossBracingFrame({
   z2: number;
   yBottom: number;
   yTop: number;
-  p: BridgeCadParameters;
+  p: ViewerCadModel;
   onHover: (e: any, text: string) => void;
   onLeave: () => void;
 }) {
@@ -594,7 +594,7 @@ function CrashBarrierMesh({
   lateralY: number;
   length: number;
   onDeckY: number;
-  p: BridgeCadParameters;
+  p: ViewerCadModel;
   onHover: (e: any, text: string) => void;
   onLeave: () => void;
 }) {
@@ -691,7 +691,7 @@ function MedianBarrierMesh({
 }: {
   length: number;
   onDeckY: number;
-  p: BridgeCadParameters;
+  p: ViewerCadModel;
   onHover: (e: any, text: string) => void;
   onLeave: () => void;
 }) {
@@ -790,7 +790,7 @@ function RailingMesh({
   lateralY: number;
   length: number;
   onDeckY: number;
-  p: BridgeCadParameters;
+  p: ViewerCadModel;
   onHover: (e: any, text: string) => void;
   onLeave: () => void;
 }) {
@@ -1012,7 +1012,7 @@ function FullBridgeModel({
   onHover,
   onLeave,
 }: {
-  p: BridgeCadParameters;
+  p: ViewerCadModel;
   onHover: (e: any, text: string) => void;
   onLeave: () => void;
 }) {
@@ -1197,62 +1197,64 @@ function FullBridgeModel({
               <meshBasicMaterial color={DECK_TEXTURE_COLOR} />
             </mesh>
           </group>
+        </group>
+      )}
 
-          {/* ── CRASH BARRIERS ── */}
-          {isBarrier && (
-            <>
-              <CrashBarrierMesh
-                lateralY={-barrierY}
-                length={L}
-                onDeckY={deckTopY}
-                p={p}
-                onHover={onHover}
-                onLeave={onLeave}
-              />
-              <CrashBarrierMesh
-                lateralY={barrierY}
-                length={L}
-                onDeckY={deckTopY}
-                p={p}
-                onHover={onHover}
-                onLeave={onLeave}
-              />
-            </>
-          )}
+      {/* ── CRASH BARRIERS (Independent structural component) ── */}
+      {isBarrier && (
+        <group>
+          <CrashBarrierMesh
+            lateralY={-barrierY}
+            length={L}
+            onDeckY={deckTopY}
+            p={p}
+            onHover={onHover}
+            onLeave={onLeave}
+          />
+          <CrashBarrierMesh
+            lateralY={barrierY}
+            length={L}
+            onDeckY={deckTopY}
+            p={p}
+            onHover={onHover}
+            onLeave={onLeave}
+          />
+        </group>
+      )}
 
-          {/* ── MEDIAN BARRIER ── */}
-          {isMedian && (
-            <MedianBarrierMesh
+      {/* ── MEDIAN BARRIER (Independent structural component) ── */}
+      {isMedian && (
+        <group>
+          <MedianBarrierMesh
+            length={L}
+            onDeckY={deckTopY}
+            p={p}
+            onHover={onHover}
+            onLeave={onLeave}
+          />
+        </group>
+      )}
+
+      {/* ── RAILINGS (Independent pedestrian component) ── */}
+      {isRailing && (
+        <group>
+          <RailingMesh
+            lateralY={-railingY}
+            length={L}
+            onDeckY={deckTopY}
+            p={p}
+            onHover={onHover}
+            onLeave={onLeave}
+          />
+          {p.footpath_config === 'BOTH' && (
+            <RailingMesh
+              lateralY={railingY}
               length={L}
               onDeckY={deckTopY}
               p={p}
               onHover={onHover}
               onLeave={onLeave}
             />
-          )}
-
-          {/* ── RAILINGS ── */}
-          {isRailing && (
-            <>
-              <RailingMesh
-                lateralY={-railingY}
-                length={L}
-                onDeckY={deckTopY}
-                p={p}
-                onHover={onHover}
-                onLeave={onLeave}
-              />
-              {p.footpath_config === 'BOTH' && (
-                <RailingMesh
-                  lateralY={railingY}
-                  length={L}
-                  onDeckY={deckTopY}
-                  p={p}
-                  onHover={onHover}
-                  onLeave={onLeave}
-                />
-              )}
-            </>
           )}
         </group>
       )}
@@ -1268,38 +1270,6 @@ function FullBridgeModel({
             girderCount={nGirders}
           />
         ))}
-
-      {/* ── DIMENSION ANNOTATIONS (when legend is on) ── */}
-      {cadDisplay.legend && (
-        <group>
-          {/* Span length dimension line (along Z at the bottom of the girder) */}
-          <DimensionLine
-            p1={[girderYOffsets[0], -d * 0.5, -L / 2]}
-            p2={[girderYOffsets[0], -d * 0.5, L / 2]}
-            label={`L = ${(p.span_length / 1000).toFixed(2)} m`}
-            color={SUPPORT_LONGIT_COLOR}
-            offsetY={-0.3}
-          />
-          {/* Bridge width dimension line (along X at mid-span) */}
-          <DimensionLine
-            p1={[girderYOffsets[0], deckTopY + 0.3, 0]}
-            p2={[girderYOffsets[nGirders - 1], deckTopY + 0.3, 0]}
-            label={`W = ${(totalDeckWidthM).toFixed(2)} m`}
-            color={SUPPORT_TRANSVERSE_COLOR}
-            offsetY={0.15}
-          />
-          {/* Girder spacing (between first two girders at mid-span) */}
-          {nGirders >= 2 && (
-            <DimensionLine
-              p1={[girderYOffsets[0], -d * 0.4, 0]}
-              p2={[girderYOffsets[1], -d * 0.4, 0]}
-              label={`s = ${(p.girder_spacing / 1000).toFixed(2)} m`}
-              color={SUPPORT_VERTICAL_COLOR}
-              offsetY={-0.25}
-            />
-          )}
-        </group>
-      )}
 
       {/* ── GRILLAGE VIEW (TOOLBAR OVERLAY) ── */}
       {cadDisplay.grillageView && p.members && p.nodes && (
@@ -1418,7 +1388,7 @@ function FullBridgeModel({
 
 // ── COMPONENT PROPS ──────────────────────────────────────────────────────────
 export interface BridgeViewerProps {
-  params?: BridgeCadParameters | null;
+  params?: ViewerCadModel | null;
   showDeck?: boolean;
   darkMode?: boolean;
   cadDisplay?: CadDisplayState;

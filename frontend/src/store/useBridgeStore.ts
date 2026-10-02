@@ -15,8 +15,9 @@ import {
   type RolledSection,
   type SteelMaterial,
 } from '../services/api';
-import { buildMockCadParameters } from '../utils/mockCadParameters';
-import type { BridgeCadParameters } from '../types/bridgeGeometry';
+import type { ViewerCadModel } from '../types/viewerCadModel';
+import { mapMockCadToViewerModel } from '../adapters/mockCadAdapter';
+import { mapBackendCadToViewerModel } from '../adapters/backendCadAdapter';
 import {
   validateBasicInput,
   validateOsiInputs,
@@ -92,8 +93,8 @@ interface BridgeState {
 
   // 3D Viewer controls
   showDeck: boolean;
-  cadParams: BridgeCadParameters | null;
-  setCadParams: (params: BridgeCadParameters | null) => void;
+  cadParams: ViewerCadModel | null;
+  setCadParams: (params: ViewerCadModel | null) => void;
 
   // Desktop CAD toolbar (ToolBarWidget) state
   activeNavTool: 'rotate' | 'pan' | 'zoom_window';
@@ -1083,11 +1084,12 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
       appendLog(`[${ts4}] Design checks complete. All safety and serviceability limit ratios within permissible bounds.`, 'success');
       appendLog('__progress__100', 'progress');
 
-      let params: BridgeCadParameters;
+      let params: ViewerCadModel;
       try {
-        params = await fetch3dCadParameters(inputs, additionalInputs);
+        const rawBackend = await fetch3dCadParameters(inputs, additionalInputs);
+        params = mapBackendCadToViewerModel(rawBackend);
       } catch {
-        params = buildMockCadParameters(inputs, additionalInputs);
+        params = mapMockCadToViewerModel(inputs, additionalInputs);
       }
 
       designTimers.length = 0;
