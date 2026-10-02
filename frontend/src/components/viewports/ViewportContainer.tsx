@@ -69,6 +69,9 @@ export const ViewportContainer: React.FC = () => {
 
         {activeViewportTab === '3d' && (
           <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            {/* Desktop component selector row at the TOP directly below CAD toolbar */}
+            {cadParams && designRan && <BridgeComponentSelector params={cadParams} />}
+
             <div
               style={{
                 flex: 1,
@@ -81,25 +84,27 @@ export const ViewportContainer: React.FC = () => {
               role="img"
               aria-label="3D CAD Viewport"
             >
-              <Suspense
-                fallback={
-                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: '48px' }}>
-                    <Box size={32} color="var(--accent-osdag)" style={{ margin: '0 auto 8px', display: 'block' }} aria-hidden="true" />
-                    <div style={{ fontSize: '12px' }}>Loading 3D Viewer...</div>
-                  </div>
-                }
-              >
-                <BridgeViewer
-                  params={designRan ? cadParams : null}
-                  showDeck={showDeck}
-                  darkMode={darkMode}
-                  cadDisplay={cadDisplay}
-                  cadZoom={cadZoom}
-                  activeNavTool={activeNavTool}
-                />
-              </Suspense>
+              {/* Blank viewport prior to design run; renders bridge only after Design */}
+              {cadParams && designRan ? (
+                <Suspense
+                  fallback={
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: '48px' }}>
+                      <Box size={32} color="var(--accent-osdag)" style={{ margin: '0 auto 8px', display: 'block' }} aria-hidden="true" />
+                      <div style={{ fontSize: '12px' }}>Loading 3D Viewer...</div>
+                    </div>
+                  }
+                >
+                  <BridgeViewer
+                    params={cadParams}
+                    showDeck={showDeck}
+                    darkMode={darkMode}
+                    cadDisplay={cadDisplay}
+                    cadZoom={cadZoom}
+                    activeNavTool={activeNavTool}
+                  />
+                </Suspense>
+              ) : null}
             </div>
-            {cadParams && designRan && <BridgeComponentSelector params={cadParams} />}
           </div>
         )}
       </div>

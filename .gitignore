@@ -24,3 +24,4 @@ Thumbs.db
 *.tsbuildinfo
 *.d.ts
 *.js.map
+.desktop_repo/
