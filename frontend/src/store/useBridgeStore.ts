@@ -8,12 +8,15 @@ import {
   fetchConcreteMaterials,
   fetchRolledSections,
   fetchSteelMaterials,
+  fetch3dCadParameters,
   isBackendAvailable,
   validateInputs,
   type ConcreteMaterial,
   type RolledSection,
   type SteelMaterial,
 } from '../services/api';
+import { buildMockCadParameters } from '../utils/mockCadParameters';
+import type { BridgeCadParameters } from '../types/bridgeGeometry';
 import {
   validateBasicInput,
   validateOsiInputs,
@@ -31,6 +34,17 @@ export interface CadDisplayState {
   loads: boolean;
   girderLabels: boolean;
 }
+
+export interface CadComponentVisibility {
+  bridge: boolean;
+  girder: boolean;
+  deck: boolean;
+  crossBracing: boolean;
+  crashBarrier: boolean;
+  median: boolean;
+  railing: boolean;
+}
+
 
 export interface CustomMaterial {
   name: string;
@@ -78,11 +92,15 @@ interface BridgeState {
 
   // 3D Viewer controls
   showDeck: boolean;
+  cadParams: BridgeCadParameters | null;
+  setCadParams: (params: BridgeCadParameters | null) => void;
 
   // Desktop CAD toolbar (ToolBarWidget) state
-  activeNavTool: 'rotate' | 'pan';
+  activeNavTool: 'rotate' | 'pan' | 'zoom_window';
   cadZoom: number;
   cadDisplay: CadDisplayState;
+  cadComponents: CadComponentVisibility;
+  cadCameraTrigger: number;
 
   // Dark mode
   darkMode: boolean;
@@ -155,7 +173,9 @@ interface BridgeState {
   toggleCad3dView: () => void;
   togglePlotsView: () => void;
   toggleDeck: () => void;
-  setActiveNavTool: (tool: 'rotate' | 'pan') => void;
+  setActiveNavTool: (tool: 'rotate' | 'pan' | 'zoom_window') => void;
+  setCadComponentVisibility: (key: keyof CadComponentVisibility, value?: boolean) => void;
+  resetCadComponents: () => void;
   toggleCadDisplay: (key: keyof CadDisplayState) => void;
   zoomIn: () => void;
   zoomOut: () => void;
@@ -226,6 +246,7 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
   showCrossSection: true,
   showTopView: true,
   showDeck: true,
+  cadParams: null,
   activeNavTool: 'rotate',
   cadZoom: 1,
   cadDisplay: {
@@ -240,6 +261,16 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
     loads: false,
     girderLabels: false,
   },
+  cadComponents: {
+    bridge: true,
+    girder: false,
+    deck: false,
+    crossBracing: false,
+    crashBarrier: false,
+    median: false,
+    railing: false,
+  },
+  cadCameraTrigger: 0,
   darkMode: false,
 
   isLocked: false,
@@ -498,6 +529,8 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
     set({
       inputs: Object.keys(next).length > 0 ? next : get().inputs,
       validationErrors: {},
+      designRan: false,
+      cadParams: null,
     });
   },
 
@@ -555,14 +588,110 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
 
   setActiveNavTool: (tool) => set({ activeNavTool: tool }),
 
+  setCadComponentVisibility: (key, value) => {
+    set((state) => {
+      const current = state.cadComponents;
+      const willBeChecked = value !== undefined ? value : !current[key];
+
+      if (key === 'bridge') {
+        if (willBeChecked) {
+          return {
+            cadComponents: {
+              bridge: true,
+              girder: false,
+              deck: false,
+              crossBracing: false,
+              crashBarrier: false,
+              median: false,
+              railing: false,
+            },
+            showDeck: true,
+          };
+        } else {
+          const anyBase =
+            current.girder ||
+            current.deck ||
+            current.crossBracing ||
+            current.crashBarrier ||
+            current.median ||
+            current.railing;
+          if (!anyBase) {
+            return { cadComponents: { ...current, bridge: true } };
+          }
+          return { cadComponents: { ...current, bridge: false } };
+        }
+      }
+
+      // Individual base component clicked
+      const next = { ...current, [key]: willBeChecked, bridge: false };
+      const anyBaseChecked =
+        next.girder ||
+        next.deck ||
+        next.crossBracing ||
+        next.crashBarrier ||
+        next.median ||
+        next.railing;
+
+      if (!anyBaseChecked) {
+        return {
+          cadComponents: {
+            bridge: true,
+            girder: false,
+            deck: false,
+            crossBracing: false,
+            crashBarrier: false,
+            median: false,
+            railing: false,
+          },
+          showDeck: true,
+        };
+      }
+
+      return {
+        cadComponents: next,
+        showDeck: next.deck,
+      };
+    });
+  },
+
+  setCadParams: (cadParams) => set({ cadParams }),
+
+  resetCadComponents: () => {
+    set({
+      cadComponents: {
+        bridge: true,
+        girder: false,
+        deck: false,
+        crossBracing: false,
+        crashBarrier: false,
+        median: false,
+        railing: false,
+      },
+      showDeck: true,
+      activeNavTool: 'rotate',
+    });
+  },
+
   toggleCadDisplay: (key) =>
     set((state) => ({
       cadDisplay: { ...state.cadDisplay, [key]: !state.cadDisplay[key] },
     })),
 
-  zoomIn: () => set((state) => ({ cadZoom: Math.min(6, +(state.cadZoom * 1.15).toFixed(3)) })),
-  zoomOut: () => set((state) => ({ cadZoom: Math.max(0.25, +(state.cadZoom / 1.15).toFixed(3)) })),
-  zoomFit: () => set({ cadZoom: 1 }),
+  zoomIn: () =>
+    set((state) => ({
+      cadZoom: Math.min(6, +(state.cadZoom * 1.15).toFixed(3)),
+      cadCameraTrigger: state.cadCameraTrigger + 1,
+    })),
+  zoomOut: () =>
+    set((state) => ({
+      cadZoom: Math.max(0.25, +(state.cadZoom / 1.15).toFixed(3)),
+      cadCameraTrigger: state.cadCameraTrigger + 1,
+    })),
+  zoomFit: () =>
+    set((state) => ({
+      cadZoom: 1,
+      cadCameraTrigger: state.cadCameraTrigger + 1,
+    })),
   setCadZoom: (zoom) => set({ cadZoom: Math.max(0.25, Math.min(6, zoom)) }),
 
   toggleDarkMode: () => {
@@ -591,7 +720,21 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
       isLocked: false,
       isUnlockConfirmOpen: false,
       designRan: false,
+      cadParams: null,
       validationErrors: {},
+      cadComponents: {
+        bridge: true,
+        girder: false,
+        deck: false,
+        crossBracing: false,
+        crashBarrier: false,
+        median: false,
+        railing: false,
+      },
+      cadDisplay: {
+        ...get().cadDisplay,
+        legend: false,
+      },
       dcrValues: {
         flexure: 0,
         shear: 0,
@@ -933,20 +1076,30 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
       set({ designProgress: 75 });
     }, 300));
 
-    designTimers.push(setTimeout(() => {
+    designTimers.push(setTimeout(async () => {
       const ts4 = formatLogTimestamp();
       const computed = computeDCR(designMember, designLoadCase, span);
       appendLog(`[${ts4}] Girder ${designMember} capacity checks evaluated successfully for ${designLoadCase}.`, 'info');
       appendLog(`[${ts4}] Design checks complete. All safety and serviceability limit ratios within permissible bounds.`, 'success');
       appendLog('__progress__100', 'progress');
 
+      let params: BridgeCadParameters;
+      try {
+        params = await fetch3dCadParameters(inputs, additionalInputs);
+      } catch {
+        params = buildMockCadParameters(inputs, additionalInputs);
+      }
+
       designTimers.length = 0;
       set({
+        cadParams: params,
         designRan: true,
         isLocked: true,
         dcrValues: computed,
         isDesignRunning: false,
         designProgress: 100,
+        activeViewportTab: '3d',
+        cadDisplay: { ...get().cadDisplay, legend: true },
       });
     }, 450));
   },
@@ -956,7 +1109,7 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
     designTimers.forEach(clearTimeout);
     designTimers.length = 0;
     const ts = formatLogTimestamp();
-    set({ isDesignRunning: false, designProgress: 0 });
+    set({ isDesignRunning: false, designProgress: 0, cadParams: null, designRan: false });
     get().appendLog(`[${ts}] Analysis was stopped by the user.`, 'warning');
     get().appendLog('__progress__0', 'progress');
   },
