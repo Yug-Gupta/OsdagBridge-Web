@@ -447,7 +447,11 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
 
       const initialInputs: Record<string, any> = { ...get().inputs };
       enriched.forEach((f) => {
-        if (f.default !== undefined && initialInputs[f.key] === undefined) {
+        // Skip null defaults — fields like geometry.span have default=null intentionally
+        // so they remain unset until the user types a value. Writing null would cause
+        // hasUserSpan() / hasUserCarriagewayWidth() to see a non-undefined value and
+        // potentially misreport the "user entered" state.
+        if (f.default !== undefined && f.default !== null && initialInputs[f.key] === undefined) {
           initialInputs[f.key] = f.default;
         }
       });
@@ -1086,8 +1090,13 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
 
       let params: ViewerCadModel;
       try {
-        const rawBackend = await fetch3dCadParameters(inputs, additionalInputs);
-        params = mapBackendCadToViewerModel(rawBackend);
+        if (!isBackendAvailable) {
+          // Backend is offline — build directly from mock adapter (no proxy call)
+          params = mapMockCadToViewerModel(inputs, additionalInputs);
+        } else {
+          const rawBackend = await fetch3dCadParameters(inputs, additionalInputs);
+          params = mapBackendCadToViewerModel(rawBackend);
+        }
       } catch {
         params = mapMockCadToViewerModel(inputs, additionalInputs);
       }

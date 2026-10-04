@@ -83,9 +83,7 @@ export const InputDock: React.FC = () => {
           <img
             src="/vectors/inputs_label_light.svg"
             alt="Inputs"
-            width={32}
-            height={90}
-            style={{ objectFit: 'contain', userSelect: 'none' }}
+            style={{ width: '32px', height: '100%', display: 'block', userSelect: 'none' }}
           />
           <div
             className="osdag-toggle-strip"
@@ -112,8 +110,8 @@ export const InputDock: React.FC = () => {
           <aside
             aria-label="Basic inputs"
             style={{
-              width: '330px',
-              minWidth: '330px',
+              width: '340px',
+              minWidth: '340px',
               background: 'var(--bg-surface)',
               borderRight: '1px solid var(--border-color)',
               height: '100%',
@@ -123,11 +121,11 @@ export const InputDock: React.FC = () => {
             }}
           >
             <div style={{
-              padding: '12px 14px 10px 14px',
+              padding: '12px 15px 10px 15px',
               display: 'flex',
               flexDirection: 'column',
               height: '100%',
-              minWidth: '330px',
+              minWidth: '310px',
               boxSizing: 'border-box'
             }}>
               {/* ── 1. Top Bar (_build_top_bar) ── */}
@@ -135,40 +133,54 @@ export const InputDock: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                marginBottom: '12px'
+                marginBottom: '12px',
+                flexWrap: 'nowrap',   /* mirrors desktop: no wrapping in top bar */
+                minWidth: 0,
               }}>
-                {/* Basic Inputs Button (active tab, mirrors basic_btn) */}
+                {/* Basic Inputs Button (active tab, mirrors basic_btn with Expanding SizePolicy) */}
                 <button
                   type="button"
                   aria-current="page"
                   style={{
-                    flex: 1,
+                    flex: '1 1 0',
+                    minWidth: 0,
                     background: 'var(--accent-osdag)',
                     color: '#ffffff',
                     fontWeight: 'bold',
                     fontSize: '13px',
                     border: 'none',
                     borderRadius: '4px',
-                    padding: '7px 16px',
+                    padding: '7px 8px',
                     cursor: 'default',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
                   }}
                 >
                   Basic Inputs
                 </button>
 
-                {/* Additional Inputs Button (mirrors additional_inputs_btn) */}
+                {/* Additional Inputs Button (mirrors additional_inputs_btn with Expanding SizePolicy) */}
                 <button
                   type="button"
                   onClick={() => setAdditionalInputsOpen(true)}
                   aria-label="Open additional inputs"
                   className="osdag-btn-standard"
-                  style={{ flex: 1, padding: '7px 16px', fontSize: '13px' }}
+                  style={{
+                    flex: '1 1 0',
+                    minWidth: 0,
+                    padding: '7px 8px',
+                    fontSize: '13px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
                 >
                   Additional Inputs
                 </button>
 
-                {/* Lock / Unlock Button (mirrors lock_btn with lock_open / lock_close svg) */}
+                {/* Lock / Unlock Button (Fixed SizePolicy, mirrors lock_btn) */}
                 <button
                   type="button"
                   onClick={toggleLock}
@@ -176,15 +188,19 @@ export const InputDock: React.FC = () => {
                   aria-pressed={isLocked}
                   aria-label={isLocked ? 'Unlock inputs' : 'Lock inputs'}
                   style={{
+                    flexShrink: 0,
+                    flexGrow: 0,
+                    width: '34px',
+                    height: '34px',
                     background: isLocked ? '#FFA500' : 'var(--bg-grouped)',
                     border: `1px solid ${isLocked ? '#fa7a02' : 'var(--border-color)'}`,
-                    padding: '6px 8px',
+                    padding: '6px',
                     borderRadius: '4px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    transition: 'background 0.15s ease'
+                    transition: 'background 0.15s ease',
                   }}
                 >
                   <img

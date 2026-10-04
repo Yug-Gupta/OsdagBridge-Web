@@ -71,9 +71,7 @@ export const OutputDock: React.FC = () => {
           <img
             src="/vectors/outputs_label_light.svg"
             alt="Outputs"
-            width={28}
-            height={90}
-            style={{ objectFit: 'contain', userSelect: 'none' }}
+            style={{ width: '28px', height: '100%', display: 'block', userSelect: 'none' }}
           />
         </div>
       ) : (

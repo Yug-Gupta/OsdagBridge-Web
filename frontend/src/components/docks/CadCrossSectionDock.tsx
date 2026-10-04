@@ -11,6 +11,7 @@
  *   - Crash barriers (IRC:5 RCC or Metallic W-Beam)
  *   - Railings (IRC:5 RCC with square voids or Steel Railing)
  *   - Median (IRC:5 Raised Kerb, RCC double barrier, or Metallic W-beam)
+ *   - Concrete aggregate texture fill matching desktop create_concrete_brush()
  *   - Standard CAD dimension lines with arrows, extension lines, and labels
  *   - Interactive component hover detection with leader lines and tooltips
  *   - Zoom In / Zoom Out / Fit-to-screen controls with smooth mouse drag/pan
@@ -19,8 +20,17 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useBridgeStore } from '../../store/useBridgeStore';
 import { ZoomIn, ZoomOut, Maximize2, X } from 'lucide-react';
-import { CrashBarrierGeometry, RailingGeometry, MedianGeometry } from '../../utils/irc5Geometry';
-import { getCarriagewayWidth, getNoOfGirders, getSpan, INPUT_KEYS } from '../../utils/bridgeInputs';
+import {
+  getCarriagewayWidth,
+  getDeckOverhang,
+  getGirderSpacing,
+  getNoOfGirders,
+  getSpan,
+  hasUserCarriagewayWidth,
+  hasUserSpan,
+  INPUT_KEYS,
+  CAD_DEFAULTS,
+} from '../../utils/bridgeInputs';
 
 export interface CadCrossSectionDockProps {
   visible?: boolean;
@@ -29,14 +39,114 @@ export interface CadCrossSectionDockProps {
   scaleFactor?: number;
 }
 
-// Shared CAD Palette matching desktop
+// Shared CAD Palette matching desktop CrossSectionCADWidget
 const GIRDER_COLOR = '#B3B4A0';
 const STIFFENER_COLOR = '#D2D2CD';
 const CROSS_BRACING_COLOR = '#EBECD3';
+const RAILING_COLOR = '#D2D2D2';
+const BARRIER_COLOR = '#DCDCDC';
 const CONCRETE_COLOR = '#E1E1E1';
 const ASPHALT_COLOR = '#282828';
-const HOVER_HIGHLIGHT_COLOR = '#FFF8D6';
+const HOVER_HIGHLIGHT_COLOR = '#FFFADC';
 const BORDER_COLOR = '#787878';
+
+/**
+ * Creates deterministic concrete aggregate texture tile matching desktop
+ * CrossSectionCADWidget.create_concrete_brush() (seed = 42).
+ */
+function createConcretePattern(ctx: CanvasRenderingContext2D): CanvasPattern | null {
+  const SIZE = 120;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const pctx = canvas.getContext('2d');
+  if (!pctx) return null;
+
+  pctx.fillStyle = '#E1E1E1';
+  pctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Seeded PRNG matching python random.Random(42)
+  let seed = 42;
+  const rand = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  const rr = (min: number, max: number) => min + rand() * (max - min);
+
+  const drawContent = (ox: number, oy: number) => {
+    pctx.save();
+    pctx.translate(ox, oy);
+
+    // Fine aggregate dots (100)
+    for (let i = 0; i < 100; i++) {
+      const x = rr(0, SIZE);
+      const y = rr(0, SIZE);
+      const r = rr(0.6, 2.2);
+      const h = Math.floor(rr(40, 110));
+      pctx.fillStyle = `rgb(${h},${h},${h})`;
+      pctx.beginPath();
+      pctx.arc(x, y, r, 0, Math.PI * 2);
+      pctx.fill();
+    }
+
+    // Coarse aggregate irregular triangles (30)
+    for (let i = 0; i < 30; i++) {
+      const cx = rr(0, SIZE);
+      const cy = rr(0, SIZE);
+      const baseAngle = rr(0, 2 * Math.PI);
+      const h = Math.floor(rr(70, 140));
+      const sat = Math.floor(rr(0, 10));
+
+      pctx.beginPath();
+      for (let v = 0; v < 3; v++) {
+        const ang = baseAngle + v * (2 * Math.PI / 3) + rr(-0.45, 0.45);
+        const dist = rr(SIZE * 0.032, SIZE * 0.072);
+        const px = cx + Math.cos(ang) * dist;
+        const py = cy + Math.sin(ang) * dist;
+        if (v === 0) pctx.moveTo(px, py);
+        else pctx.lineTo(px, py);
+      }
+      pctx.closePath();
+      pctx.fillStyle = `rgb(${h + sat},${h},${h - sat})`;
+      pctx.fill();
+      const alpha = rr(0.25, 0.55);
+      pctx.strokeStyle = `rgba(20, 20, 20, ${alpha})`;
+      pctx.lineWidth = rr(0.4, 0.8);
+      pctx.stroke();
+    }
+
+    // Micro-scratches
+    const scratchCount = Math.floor(SIZE * 0.3);
+    for (let i = 0; i < scratchCount; i++) {
+      const x = rr(0, SIZE);
+      const y = rr(0, SIZE);
+      const len = rr(2, SIZE * 0.08);
+      const ang = rr(0, Math.PI * 2);
+      const alpha = rr(0.04, 0.12);
+      pctx.strokeStyle = `rgba(90, 85, 80, ${alpha})`;
+      pctx.lineWidth = rr(0.3, 0.7);
+      pctx.beginPath();
+      pctx.moveTo(x, y);
+      pctx.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+      pctx.stroke();
+    }
+
+    pctx.restore();
+  };
+
+  // Draw 9 copies for seamless tiling
+  for (const dx of [-SIZE, 0, SIZE]) {
+    for (const dy of [-SIZE, 0, SIZE]) {
+      drawContent(dx, dy);
+    }
+  }
+
+  // Subtle unifying wash
+  pctx.fillStyle = 'rgba(100, 95, 88, 0.04)';
+  pctx.fillRect(0, 0, SIZE, SIZE);
+
+  return ctx.createPattern(canvas, 'repeat');
+}
 
 export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
   visible = true,
@@ -56,24 +166,36 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
 
   // Hovered element tracking
   const [hoveredElement, setHoveredElement] = useState<string | null>(null);
-  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
-  // Compute parameters from store inputs
-  const spanLength = getSpan(inputs) * 1000; // mm
-  const numGirders = Math.max(1, getNoOfGirders(inputs, additionalInputs));
-  const carriagewayWidth = getCarriagewayWidth(inputs) * 1000; // mm
-  const medianPresent = inputs[INPUT_KEYS.includeMedian] === 'Yes';
+  // ── Compute parameters from store inputs ──
+  // Always use CAD fallback defaults when inputs are blank (mirrors desktop cad_cross_section.py)
+  const spanLength = getSpan(inputs) * 1000; // mm (35,000)
+  const numGirders = Math.max(1, getNoOfGirders(inputs, additionalInputs)); // 4
+  const carriagewayWidth = getCarriagewayWidth(inputs) * 1000; // mm (10,500)
+  const girderSpacing = getGirderSpacing(inputs, additionalInputs) * 1000; // mm (2,750)
+  const deckOverhang = getDeckOverhang(inputs, additionalInputs) * 1000; // mm (1,000)
+  const deckThickness = CAD_DEFAULTS.DECK_THICKNESS_MM; // mm (200)
+  const medianPresent = inputs[INPUT_KEYS.includeMedian] === 'Yes'; // false by default
   const medianWidth = 1200; // mm
-  const deckThickness = 200; // mm
-  const deckOverhang = 1000; // mm
-  const footpathConfig = (inputs[INPUT_KEYS.footpath] || 'both') as 'both' | 'left' | 'right' | 'none';
+
+  const footpathConfig = (() => {
+    const fp = inputs[INPUT_KEYS.footpath];
+    if (fp === 'None' || fp === 'none') return 'none';
+    if (fp === 'Single Side') return 'left';
+    if (fp === 'Both Sides') return 'both';
+    return 'both'; // Desktop default is 'both'
+  })() as 'both' | 'left' | 'right' | 'none';
+
   const footpathWidth = 1500; // mm
   const footpathThickness = 200; // mm
   const crashBarrierWidth = 500; // mm
   const railingWidth = 375; // mm
   const wearingCourseThickness = 50; // mm
 
-  // Girder dimensions & visual scale
+  // Flags: did the user explicitly enter a value, or are we showing CAD fallback labels?
+  const userHasCarriageway = hasUserCarriagewayWidth(inputs);
+
+  // Girder dimensions & visual scale (mirrors desktop CrossSectionCADWidget)
   const girderDepth = 500;
   const topFlangeW = 180;
   const topFlangeT = 22;
@@ -120,14 +242,6 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
         y: e.clientY - dragStart.y,
       });
     }
-
-    if (canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      setMousePos({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
-    }
   };
 
   const handleMouseUp = () => {
@@ -155,31 +269,53 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
 
-    // Clear background
+    // Clear background to solid white
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, width, height);
 
-    // Apply pan & zoom transformations
-    ctx.save();
-    ctx.translate(width / 2 + panOffset.x, height / 2 + panOffset.y);
-    ctx.scale(zoomLevel * scaleFactor, zoomLevel * scaleFactor);
+    // Create concrete texture pattern
+    const concretePattern = createConcretePattern(ctx) || CONCRETE_COLOR;
 
+    // Viewport-fit scaling matching desktop compute_fit_zoom
     const totalDeckWidth = computeTotalDeckWidth();
-    const baseScale = Math.min((width - 120) / totalDeckWidth, (height - 180) / 2500);
+    const modelH = girderDepth * visualScale.depth + deckThickness + footpathThickness + 800;
 
-    const leftFpWidth = footpathConfig === 'left' || footpathConfig === 'both' ? footpathWidth : 0;
-    const rightFpWidth = footpathConfig === 'right' || footpathConfig === 'both' ? footpathWidth : 0;
-    const leftRailingPresent = leftFpWidth > 0;
-    const rightRailingPresent = rightFpWidth > 0;
+    const PADDING = 0.15; // 15% margin matching desktop
+    const availW = width * (1.0 - 2 * PADDING);
+    const availH = height * (1.0 - 2 * PADDING);
+    const baseScale = Math.min(availW / totalDeckWidth, availH / modelH);
+
+    // Centering calculations matching desktop base_y
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const girderDepthVisual = girderDepth * baseScale * visualScale.depth;
+    const deckThickPx = deckThickness * baseScale;
+    const fpThickPx = footpathThickness * baseScale;
+    const wcThickPx = wearingCourseThickness * baseScale;
+
+    const totalBridgeHeight =
+      girderDepthVisual + deckThickPx + fpThickPx + 800 * baseScale + 1000 * baseScale;
+    const baseY = (height + totalBridgeHeight) / 2 - 70;
+
+    const girderTopY = baseY - girderDepthVisual;
+    const deckBottomY = girderTopY;
+    const deckTopY = deckBottomY - deckThickPx;
+    const fpBottomY = deckBottomY;
+    const fpTopY = fpBottomY - fpThickPx;
+
+    // Layout from Left to Right
+    const deckStartX = centerX - (totalDeckWidth * baseScale) / 2;
+    const deckLeftX = deckStartX;
+    const deckRightX = deckStartX + totalDeckWidth * baseScale;
+
+    const leftRailingPresent = footpathConfig === 'both' || footpathConfig === 'left';
+    const rightRailingPresent = footpathConfig === 'both' || footpathConfig === 'right';
 
     const leftRailWPx = leftRailingPresent ? railingWidth * baseScale : 0;
     const rightRailWPx = rightRailingPresent ? railingWidth * baseScale : 0;
-    const leftFpWPx = leftFpWidth * baseScale;
-    const rightFpWPx = rightFpWidth * baseScale;
+    const leftFpWPx = leftRailingPresent ? footpathWidth * baseScale : 0;
+    const rightFpWPx = rightRailingPresent ? footpathWidth * baseScale : 0;
     const cbWPx = crashBarrierWidth * baseScale;
-
-    const deckLeftX = -(totalDeckWidth * baseScale) / 2;
-    const deckRightX = (totalDeckWidth * baseScale) / 2;
 
     const leftFpX = deckLeftX + leftRailWPx;
     const leftBarrierX = leftFpX + leftFpWPx;
@@ -189,22 +325,22 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
     const rightBarrierEndX = rightFpX;
     const rightBarrierX = rightBarrierEndX - cbWPx;
 
-    let cw1StartX = leftBarrierEndX;
-    let cw1EndX = rightBarrierX;
+    let carriagewayStartX = leftBarrierEndX;
+    let carriagewayEndX = rightBarrierX;
     let medianStartX = 0;
     let medianEndX = 0;
 
     if (medianPresent) {
       const cwWidthPx = carriagewayWidth * baseScale;
       const medianWPx = medianWidth * baseScale;
-      cw1StartX = leftBarrierEndX;
-      cw1EndX = cw1StartX + cwWidthPx;
-      medianStartX = cw1EndX;
+      medianStartX = leftBarrierEndX + cwWidthPx;
       medianEndX = medianStartX + medianWPx;
+      carriagewayStartX = leftBarrierEndX;
+      carriagewayEndX = medianEndX + cwWidthPx;
     }
 
-    const slopeStartX = leftBarrierEndX;
-    const slopeEndX = rightBarrierX;
+    const slopeStartX = carriagewayStartX;
+    const slopeEndX = carriagewayEndX;
 
     const computeSlopeOffset = (x: number) => {
       if (x < slopeStartX || x > slopeEndX) return 0;
@@ -212,177 +348,141 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
       const span = Math.max(1, slopeEndX - slopeStartX);
       const xi = (x - mid) / (span / 2);
       const slopeHeight = 0.005 * (span / 2);
-      return -slopeHeight * (1 - xi * xi);
+      return -slopeHeight * (1.0 - xi * xi);
     };
 
-    const girderDepthPx = girderDepth * baseScale * visualScale.depth;
-    const deckThickPx = deckThickness * baseScale;
-    const fpThickPx = footpathThickness * baseScale;
-    const wcThickPx = wearingCourseThickness * baseScale;
-
-    const deckBottomY = 20;
-    const deckTopY = deckBottomY - deckThickPx;
-    const fpTopY = deckBottomY - fpThickPx;
-    const girderBaseY = deckBottomY + girderDepthPx;
-
     // Girder horizontal locations
-    const overhangPx = deckOverhang * baseScale;
-    let girderPositions: number[] = [];
+    const deckOverhangPx = deckOverhang * baseScale;
+    let positions: number[] = [];
     if (numGirders > 1) {
-      const firstX = deckLeftX + overhangPx;
-      const lastX = deckRightX - overhangPx;
-      const spacing = (lastX - firstX) / (numGirders - 1);
-      girderPositions = Array.from({ length: numGirders }, (_, i) => firstX + i * spacing);
+      const firstGirderX = deckLeftX + deckOverhangPx;
+      const lastGirderX = deckRightX - deckOverhangPx;
+      const actualSpacingPx = (lastGirderX - firstGirderX) / (numGirders - 1);
+      positions = Array.from({ length: numGirders }, (_, i) => firstGirderX + i * actualSpacingPx);
     } else {
-      girderPositions = [0];
+      positions = [centerX];
     }
 
-    // ── 1. Draw Concrete Deck Slab (Curved polygon) ──
-    ctx.beginPath();
-    const numPts = 60;
+    // Apply smooth pan & zoom transformations centered at (centerX, centerY)
+    ctx.save();
+    ctx.translate(centerX + panOffset.x, centerY + panOffset.y);
+    ctx.scale(zoomLevel * scaleFactor, zoomLevel * scaleFactor);
+    ctx.translate(-centerX, -centerY);
+
+    // ── 1. Draw Concrete Deck Slab (Curved polygon matching desktop) ──
+    const numPts = 50;
     const topPts: { x: number; y: number }[] = [];
     const botPts: { x: number; y: number }[] = [];
 
-    // Left Footpath
-    if (leftFpWidth > 0) {
+    const leftFpBoundary = leftFpWPx > 0 ? leftBarrierX : null;
+    const rightFpBoundary = rightFpWPx > 0 ? rightBarrierEndX : null;
+
+    const mainStart = leftFpBoundary !== null ? leftFpBoundary : deckLeftX;
+    const mainEnd = rightFpBoundary !== null ? rightFpBoundary : deckRightX;
+
+    // Left footpath flat top
+    if (leftFpBoundary !== null) {
       topPts.push({ x: deckLeftX, y: fpTopY });
-      topPts.push({ x: leftBarrierX, y: fpTopY });
-      topPts.push({ x: leftBarrierX, y: deckTopY });
-    } else {
-      topPts.push({ x: deckLeftX, y: deckTopY });
+      topPts.push({ x: leftFpBoundary, y: fpTopY });
+      topPts.push({ x: leftFpBoundary, y: deckTopY });
     }
 
-    // Carriageway Deck with 0.5% slope
-    const startDeckX = leftFpWidth > 0 ? leftBarrierX : deckLeftX;
-    const endDeckX = rightFpWidth > 0 ? rightBarrierEndX : deckRightX;
-
+    // Main carriageway top curve with parabolic camber
     for (let i = 0; i <= numPts; i++) {
-      const x = startDeckX + (i * (endDeckX - startDeckX)) / numPts;
+      const x = mainStart + (i * (mainEnd - mainStart)) / numPts;
       const y = deckTopY + computeSlopeOffset(x);
       topPts.push({ x, y });
     }
 
-    // Right Footpath
-    if (rightFpWidth > 0) {
-      topPts.push({ x: rightBarrierEndX, y: fpTopY });
+    // Right footpath flat top
+    if (rightFpBoundary !== null) {
+      topPts.push({ x: rightFpBoundary, y: deckTopY });
+      topPts.push({ x: rightFpBoundary, y: fpTopY });
       topPts.push({ x: deckRightX, y: fpTopY });
     }
 
+    // Bottom edge
     botPts.push({ x: deckRightX, y: deckBottomY });
     botPts.push({ x: deckLeftX, y: deckBottomY });
 
+    ctx.beginPath();
     ctx.moveTo(topPts[0].x, topPts[0].y);
     topPts.forEach((p) => ctx.lineTo(p.x, p.y));
     botPts.forEach((p) => ctx.lineTo(p.x, p.y));
     ctx.closePath();
 
-    ctx.fillStyle = hoveredElement === 'deck' ? HOVER_HIGHLIGHT_COLOR : CONCRETE_COLOR;
+    ctx.fillStyle = hoveredElement === 'deck' ? '#F0F0F0' : concretePattern;
     ctx.fill();
+
+    // Solid outline of deck slab
     ctx.strokeStyle = BORDER_COLOR;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.0;
     ctx.stroke();
 
-    // ── 2. Wearing Course (Curved asphalt layer) ──
+    // ── 2. Wearing Course Asphalt Layer (Curved) ──
     if (wcThickPx > 0) {
-      const drawWearingStrip = (x1: number, x2: number) => {
-        if (x2 <= x1) return;
+      const drawWearingSegment = (xStart: number, xEnd: number) => {
+        if (xEnd <= xStart) return;
         ctx.beginPath();
         for (let i = 0; i <= 30; i++) {
-          const x = x1 + (i * (x2 - x1)) / 30;
+          const x = xStart + (i * (xEnd - xStart)) / 30;
           const y = deckTopY + computeSlopeOffset(x) - wcThickPx;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
         for (let i = 30; i >= 0; i--) {
-          const x = x1 + (i * (x2 - x1)) / 30;
+          const x = xStart + (i * (xEnd - xStart)) / 30;
           const y = deckTopY + computeSlopeOffset(x);
           ctx.lineTo(x, y);
         }
         ctx.closePath();
-        ctx.fillStyle = hoveredElement === 'wearing_course' ? HOVER_HIGHLIGHT_COLOR : ASPHALT_COLOR;
+        ctx.fillStyle = ASPHALT_COLOR;
         ctx.fill();
       };
 
-      if (medianPresent) {
-        drawWearingStrip(leftBarrierEndX, medianStartX);
-        drawWearingStrip(medianEndX, rightBarrierX);
+      const renderedCbWPx = 450 * baseScale;
+      const leftBarrierVisualEnd = leftBarrierX + renderedCbWPx;
+      const rightBarrierVisualStart = rightBarrierEndX - renderedCbWPx;
+
+      if (medianPresent && medianStartX > 0 && medianEndX > 0) {
+        drawWearingSegment(leftBarrierVisualEnd, medianStartX);
+        drawWearingSegment(medianEndX, rightBarrierVisualStart);
       } else {
-        drawWearingStrip(leftBarrierEndX, rightBarrierX);
+        drawWearingSegment(leftBarrierVisualEnd, rightBarrierVisualStart);
       }
     }
 
-    // ── 3. Cross Bracings (Diagonal X-bracings between girders) ──
+    // ── 3. Girders & Stiffeners (I-sections with chamfers) ──
     const tfTopPx = topFlangeT * baseScale * visualScale.flangeThickness;
     const tfBotPx = botFlangeT * baseScale * visualScale.flangeThickness;
-    const twPx = webT * baseScale * visualScale.webThickness;
-    const braceThk = Math.max(2, 4 * zoomLevel);
-
-    for (let i = 0; i < numGirders - 1; i++) {
-      const g1X = girderPositions[i] + twPx / 2;
-      const g2X = girderPositions[i + 1] - twPx / 2;
-
-      const topY = deckBottomY + tfTopPx + 2;
-      const botY = girderBaseY - tfBotPx - 2;
-
-      // Draw \ diagonal
-      ctx.beginPath();
-      ctx.moveTo(g1X, topY);
-      ctx.lineTo(g2X, botY);
-      ctx.strokeStyle = CROSS_BRACING_COLOR;
-      ctx.lineWidth = braceThk;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(g1X, topY);
-      ctx.lineTo(g2X, botY);
-      ctx.strokeStyle = '#999977';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Draw / diagonal
-      ctx.beginPath();
-      ctx.moveTo(g1X, botY);
-      ctx.lineTo(g2X, topY);
-      ctx.strokeStyle = CROSS_BRACING_COLOR;
-      ctx.lineWidth = braceThk;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(g1X, botY);
-      ctx.lineTo(g2X, topY);
-      ctx.strokeStyle = '#999977';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-
-    // ── 4. Girders & Stiffeners (I-sections with chamfers) ──
     const bfTopPx = topFlangeW * baseScale * visualScale.flangeWidth;
     const bfBotPx = botFlangeW * baseScale * visualScale.flangeWidth;
+    const twPx = webT * baseScale * visualScale.webThickness;
     const stiffWPx = stiffenerW * baseScale;
 
-    girderPositions.forEach((gx, idx) => {
+    positions.forEach((gx, idx) => {
       const isGirderHovered = hoveredElement === `girder-${idx}` || hoveredElement === 'girder';
-      ctx.fillStyle = isGirderHovered ? '#7a9a12' : GIRDER_COLOR;
+      ctx.fillStyle = isGirderHovered ? '#FFFADC' : GIRDER_COLOR;
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1.2;
 
-      // Top Flange
-      ctx.fillRect(gx - bfTopPx / 2, deckBottomY, bfTopPx, tfTopPx);
-      ctx.strokeRect(gx - bfTopPx / 2, deckBottomY, bfTopPx, tfTopPx);
+      // Bottom Flange
+      ctx.fillRect(gx - bfBotPx / 2, baseY - tfBotPx, bfBotPx, tfBotPx);
+      ctx.strokeRect(gx - bfBotPx / 2, baseY - tfBotPx, bfBotPx, tfBotPx);
 
       // Web
-      const webHPx = girderDepthPx - tfTopPx - tfBotPx;
-      ctx.fillRect(gx - twPx / 2, deckBottomY + tfTopPx, twPx, webHPx);
-      ctx.strokeRect(gx - twPx / 2, deckBottomY + tfTopPx, twPx, webHPx);
+      const webHPx = girderDepthVisual - tfTopPx - tfBotPx;
+      ctx.fillRect(gx - twPx / 2, baseY - girderDepthVisual + tfTopPx, twPx, webHPx);
+      ctx.strokeRect(gx - twPx / 2, baseY - girderDepthVisual + tfTopPx, twPx, webHPx);
 
-      // Bottom Flange
-      ctx.fillRect(gx - bfBotPx / 2, girderBaseY - tfBotPx, bfBotPx, tfBotPx);
-      ctx.strokeRect(gx - bfBotPx / 2, girderBaseY - tfBotPx, bfBotPx, tfBotPx);
+      // Top Flange
+      ctx.fillRect(gx - bfTopPx / 2, baseY - girderDepthVisual, bfTopPx, tfTopPx);
+      ctx.strokeRect(gx - bfTopPx / 2, baseY - girderDepthVisual, bfTopPx, tfTopPx);
 
-      // Stiffeners (Left & Right chamfered polygons)
+      // Stiffeners (chamfered polygons matching desktop draw_stiffeners)
       ctx.fillStyle = STIFFENER_COLOR;
-      const sTopY = deckBottomY + tfTopPx;
-      const sBotY = girderBaseY - tfBotPx;
+      const sTopY = baseY - girderDepthVisual + tfTopPx;
+      const sBotY = baseY - tfBotPx;
       const chamfer = Math.min(stiffWPx, tfTopPx) * 0.8;
 
       // Left Stiffener
@@ -414,55 +514,75 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
       ctx.stroke();
     });
 
-    // ── 5. Crash Barriers (RCC or Metallic) ──
-    const drawCrashBarrier = (x: number, isLeft: boolean) => {
-      const cbHeightPx = 900 * baseScale;
-      const cbBaseVPx = 100 * baseScale;
-      const midOffPx = 350 * baseScale;
-      const yBottom = deckTopY;
-      const yTop = deckTopY - cbHeightPx;
-      const yBaseTop = yBottom - cbBaseVPx;
-      const yMid = yBottom - midOffPx;
+    // ── 4. Cross Bracing (X-Bracing with true vector geometry) ──
+    if (numGirders > 1) {
+      const halfWeb = twPx / 2;
+      const thickness = Math.max(2, 3.5 * (zoomLevel / 1.2));
 
-      ctx.beginPath();
-      if (isLeft) {
-        ctx.moveTo(x, yBottom);
-        ctx.lineTo(x + cbWPx, yBottom);
-        ctx.lineTo(x + cbWPx, yBaseTop);
-        ctx.lineTo(x + cbWPx * 0.6, yMid);
-        ctx.lineTo(x + cbWPx * 0.45, yTop);
-        ctx.lineTo(x + cbWPx * 0.1, yTop);
-        ctx.lineTo(x, yBaseTop);
-      } else {
-        ctx.moveTo(x - cbWPx, yBottom);
-        ctx.lineTo(x, yBottom);
-        ctx.lineTo(x, yBaseTop);
-        ctx.lineTo(x - cbWPx * 0.1, yTop);
-        ctx.lineTo(x - cbWPx * 0.45, yTop);
-        ctx.lineTo(x - cbWPx * 0.6, yMid);
-        ctx.lineTo(x - cbWPx, yBaseTop);
+      for (let i = 0; i < numGirders - 1; i++) {
+        const x1 = positions[i] + halfWeb;
+        const x2 = positions[i + 1] - halfWeb;
+
+        const topL = baseY - girderDepthVisual + tfTopPx + 0.02 * girderDepthVisual;
+        const bottomL = baseY - tfBotPx + 0.02 * girderDepthVisual;
+        const topR = topL;
+        const bottomR = bottomL;
+
+        const dx = x2 - x1;
+
+        // Diagonal \
+        const dyBs = bottomR - topL;
+        const lBs = Math.hypot(dx, dyBs);
+        if (lBs > 0) {
+          const perpX = (-dyBs / lBs) * (thickness / 2);
+          const perpY = (dx / lBs) * (thickness / 2);
+
+          ctx.beginPath();
+          ctx.moveTo(x1 + perpX, topL + perpY);
+          ctx.lineTo(x2 + perpX, bottomR + perpY);
+          ctx.lineTo(x2 - perpX, bottomR - perpY);
+          ctx.lineTo(x1 - perpX, topL - perpY);
+          ctx.closePath();
+          ctx.fillStyle = CROSS_BRACING_COLOR;
+          ctx.fill();
+          ctx.strokeStyle = '#999977';
+          ctx.lineWidth = 1.0;
+          ctx.stroke();
+        }
+
+        // Diagonal /
+        const dySl = topR - bottomL;
+        const lSl = Math.hypot(dx, dySl);
+        if (lSl > 0) {
+          const perpX = (-dySl / lSl) * (thickness / 2);
+          const perpY = (dx / lSl) * (thickness / 2);
+
+          ctx.beginPath();
+          ctx.moveTo(x1 + perpX, bottomL + perpY);
+          ctx.lineTo(x2 + perpX, topR + perpY);
+          ctx.lineTo(x2 - perpX, topR - perpY);
+          ctx.lineTo(x1 - perpX, bottomL - perpY);
+          ctx.closePath();
+          ctx.fillStyle = CROSS_BRACING_COLOR;
+          ctx.fill();
+          ctx.strokeStyle = '#999977';
+          ctx.lineWidth = 1.0;
+          ctx.stroke();
+        }
       }
-      ctx.closePath();
-      ctx.fillStyle = hoveredElement === 'crash_barrier' ? HOVER_HIGHLIGHT_COLOR : CONCRETE_COLOR;
-      ctx.fill();
-      ctx.strokeStyle = BORDER_COLOR;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    };
+    }
 
-    drawCrashBarrier(leftBarrierX, true);
-    drawCrashBarrier(rightBarrierEndX, false);
-
-    // ── 6. Railings (RCC standard with square voids) ──
-    const drawRailing = (x: number) => {
+    // ── 5. Railings (IRC:5 RCC with square voids) ──
+    const drawRccRailing = (x: number) => {
       const railHPx = 1000 * baseScale;
       const railWPx = railingWidth * baseScale;
       const baseHPx = 100 * baseScale;
 
       // Base
-      ctx.fillStyle = hoveredElement === 'railing' ? HOVER_HIGHLIGHT_COLOR : CONCRETE_COLOR;
+      ctx.fillStyle = hoveredElement === 'railing' ? HOVER_HIGHLIGHT_COLOR : concretePattern;
       ctx.fillRect(x, fpTopY - baseHPx, railWPx, baseHPx);
       ctx.strokeStyle = BORDER_COLOR;
+      ctx.lineWidth = 1.0;
       ctx.strokeRect(x, fpTopY - baseHPx, railWPx, baseHPx);
 
       // Post
@@ -478,11 +598,62 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
       }
     };
 
-    if (leftRailingPresent) drawRailing(deckLeftX);
-    if (rightRailingPresent) drawRailing(deckRightX - railingWidth * baseScale);
+    if (leftRailingPresent) drawRccRailing(deckLeftX);
+    if (rightRailingPresent) drawRccRailing(deckRightX - railingWidth * baseScale);
 
-    // ── 7. Median (Raised Kerb Trapezoid) ──
-    if (medianPresent) {
+    // ── 6. Crash Barriers (IRC 5 RCC geometry) ──
+    const drawCrashBarrier = (x: number, isLeft: boolean) => {
+      const TOTAL_HEIGHT = 900.0;
+      const BOTTOM_WIDTH = 450.0;
+      const BASE_VERTICAL = 100.0;
+      const MID_OFFSET = 350.0;
+
+      const h = TOTAL_HEIGHT * baseScale;
+      const bottomW = BOTTOM_WIDTH * baseScale;
+      const baseV = BASE_VERTICAL * baseScale;
+
+      const yBottom = deckTopY;
+      const yBaseTop = yBottom - baseV;
+      const yMid = yBottom - MID_OFFSET * baseScale;
+      const yTop = yBottom - h;
+
+      const shapeScale = BOTTOM_WIDTH / 525.0;
+      const rightAtMid = 300 * baseScale * shapeScale;
+      const leftAtTop = 50 * baseScale * shapeScale;
+      const rightAtTop = 225 * baseScale * shapeScale;
+
+      ctx.beginPath();
+      if (isLeft) {
+        ctx.moveTo(x, yBottom);
+        ctx.lineTo(x + bottomW, yBottom);
+        ctx.lineTo(x + bottomW, yBaseTop);
+        ctx.lineTo(x + rightAtMid, yMid);
+        ctx.lineTo(x + rightAtTop, yTop);
+        ctx.lineTo(x + leftAtTop, yTop);
+        ctx.lineTo(x, yBaseTop);
+      } else {
+        ctx.moveTo(x - bottomW, yBottom);
+        ctx.lineTo(x, yBottom);
+        ctx.lineTo(x, yBaseTop);
+        ctx.lineTo(x - leftAtTop, yTop);
+        ctx.lineTo(x - rightAtTop, yTop);
+        ctx.lineTo(x - rightAtMid, yMid);
+        ctx.lineTo(x - bottomW, yBaseTop);
+      }
+      ctx.closePath();
+
+      ctx.fillStyle = hoveredElement === 'crash_barrier' ? HOVER_HIGHLIGHT_COLOR : concretePattern;
+      ctx.fill();
+      ctx.strokeStyle = BORDER_COLOR;
+      ctx.lineWidth = Math.max(1.0, baseScale * 1.5);
+      ctx.stroke();
+    };
+
+    drawCrashBarrier(leftBarrierX, true);
+    drawCrashBarrier(rightBarrierEndX, false);
+
+    // ── 7. Median (if enabled) ──
+    if (medianPresent && medianStartX > 0 && medianEndX > 0) {
       const kerbHPx = 225 * baseScale;
       const kerbBottomWPx = medianWidth * baseScale;
       const kerbTopWPx = (medianWidth - 50) * baseScale;
@@ -494,82 +665,274 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
       ctx.lineTo(medianEndX - (kerbBottomWPx - kerbTopWPx) / 2, my - kerbHPx);
       ctx.lineTo(medianStartX + (kerbBottomWPx - kerbTopWPx) / 2, my - kerbHPx);
       ctx.closePath();
-      ctx.fillStyle = hoveredElement === 'median' ? HOVER_HIGHLIGHT_COLOR : CONCRETE_COLOR;
+      ctx.fillStyle = hoveredElement === 'median' ? HOVER_HIGHLIGHT_COLOR : concretePattern;
       ctx.fill();
       ctx.strokeStyle = BORDER_COLOR;
       ctx.stroke();
     }
 
-    // ── 8. Dimension Lines & Extension Guides ──
-    const drawDimArrow = (x1: number, y1: number, x2: number, y2: number, text: string) => {
+    // ── 8. Dimension Lines & Extension Guides (matching desktop styling) ──
+    const drawTextWithBg = (
+      text: string,
+      x: number,
+      y: number,
+      options?: { align?: CanvasTextAlign; fontSize?: number; bold?: boolean }
+    ) => {
+      const fontSize = options?.fontSize ?? 9;
+      const isBold = options?.bold ?? false;
+      const align = options?.align ?? 'center';
+      ctx.font = `${isBold ? 'bold ' : ''}${fontSize}px Arial, sans-serif`;
+      ctx.textAlign = align;
+      ctx.textBaseline = 'middle';
+
+      const lines = text.split('\n');
+      const lineHeight = fontSize + 3;
+      const totalHeight = lines.length * lineHeight;
+      const maxWidth = Math.max(...lines.map((l) => ctx.measureText(l).width));
+      const padding = 2;
+
+      let bgX = x - maxWidth / 2 - padding;
+      if (align === 'left') bgX = x - padding;
+      else if (align === 'right') bgX = x - maxWidth - padding;
+      const bgY = y - totalHeight / 2 - padding;
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+      ctx.fillRect(bgX, bgY, maxWidth + 2 * padding, totalHeight + 2 * padding);
+
+      ctx.fillStyle = '#000000';
+      const startY = y - totalHeight / 2 + lineHeight / 2;
+      lines.forEach((line, i) => {
+        ctx.fillText(line, x, startY + i * lineHeight);
+      });
+    };
+
+    const drawDimensionArrow = (
+      x1: number,
+      y1: number,
+      x2: number,
+      y2: number,
+      text: string,
+      extDir: 'up' | 'down' | 'none' = 'none',
+      extEndY?: number,
+      textOffset = 0
+    ) => {
+      ctx.save();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 0.8;
+
+      // Main line
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 0.8;
       ctx.stroke();
 
-      // End ticks & arrows
+      // End ticks
+      const tickLen = 6;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1 - tickLen / 2);
+      ctx.lineTo(x1, y1 + tickLen / 2);
+      ctx.moveTo(x2, y2 - tickLen / 2);
+      ctx.lineTo(x2, y2 + tickLen / 2);
+      ctx.stroke();
+
+      // Arrowheads (4px x 2px)
       const arrowSize = 4;
+      const arrowHalf = 2;
       ctx.fillStyle = '#000000';
 
-      // Left arrow
       ctx.beginPath();
       ctx.moveTo(x1, y1);
-      ctx.lineTo(x1 + arrowSize, y1 - arrowSize / 2);
-      ctx.lineTo(x1 + arrowSize, y1 + arrowSize / 2);
+      ctx.lineTo(x1 + arrowSize, y1 - arrowHalf);
+      ctx.lineTo(x1 + arrowSize, y1 + arrowHalf);
       ctx.closePath();
       ctx.fill();
 
-      // Right arrow
       ctx.beginPath();
       ctx.moveTo(x2, y2);
-      ctx.lineTo(x2 - arrowSize, y2 - arrowSize / 2);
-      ctx.lineTo(x2 - arrowSize, y2 + arrowSize / 2);
+      ctx.lineTo(x2 - arrowSize, y2 - arrowHalf);
+      ctx.lineTo(x2 - arrowSize, y2 + arrowHalf);
       ctx.closePath();
       ctx.fill();
 
-      // Text with white background badge
-      ctx.font = '9px Arial, sans-serif';
-      const textW = ctx.measureText(text).width;
-      const midX = (x1 + x2) / 2;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-      ctx.fillRect(midX - textW / 2 - 2, y1 - 13, textW + 4, 11);
-      ctx.fillStyle = '#000000';
-      ctx.fillText(text, midX - textW / 2, y1 - 4);
+      // Extension lines
+      if (extDir !== 'none' && extEndY !== undefined) {
+        ctx.beginPath();
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = '#646464';
+        ctx.lineWidth = 0.8;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x1, extEndY);
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2, extEndY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      if (text) {
+        const midX = (x1 + x2) / 2;
+        const textY = extDir === 'down' ? y1 + 14 + textOffset : y1 - 8 + textOffset;
+        drawTextWithBg(text, midX, textY);
+      }
+      ctx.restore();
     };
 
-    const yDimOverall = girderBaseY + 60;
-    const yDimSpacing = girderBaseY + 30;
-    const yDimTop = deckTopY - 140;
+    const drawVerticalDimensionArrow = (
+      x: number,
+      y1: number,
+      y2: number,
+      text: string,
+      side: 'left' | 'right' = 'left'
+    ) => {
+      ctx.save();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 0.8;
 
-    // Overall Bridge Width
-    drawDimArrow(deckLeftX, yDimOverall, deckRightX, yDimOverall, `Overall Width = ${(totalDeckWidth / 1000).toFixed(2)} m`);
+      ctx.beginPath();
+      ctx.moveTo(x, y1);
+      ctx.lineTo(x, y2);
+      ctx.stroke();
 
-    // Dotted extension lines for overall width
-    ctx.setLineDash([3, 3]);
-    ctx.strokeStyle = '#888888';
-    ctx.beginPath();
-    ctx.moveTo(deckLeftX, fpTopY);
-    ctx.lineTo(deckLeftX, yDimOverall);
-    ctx.moveTo(deckRightX, fpTopY);
-    ctx.lineTo(deckRightX, yDimOverall);
-    ctx.stroke();
-    ctx.setLineDash([]);
+      const tickLen = 4;
+      ctx.beginPath();
+      ctx.moveTo(x - tickLen, y1);
+      ctx.lineTo(x + tickLen, y1);
+      ctx.moveTo(x - tickLen, y2);
+      ctx.lineTo(x + tickLen, y2);
+      ctx.stroke();
 
-    // Girder Spacing
-    if (numGirders > 1) {
-      drawDimArrow(
-        girderPositions[0],
-        yDimSpacing,
-        girderPositions[1],
-        yDimSpacing,
-        `Spacing = ${(girderPositions[1] - girderPositions[0]) / baseScale / 1000} m`
-      );
+      const arrowSize = 3.5;
+      const arrowHalf = 1.5;
+      ctx.fillStyle = '#000000';
+
+      ctx.beginPath();
+      ctx.moveTo(x, y1);
+      ctx.lineTo(x - arrowHalf, y1 + arrowSize);
+      ctx.lineTo(x + arrowHalf, y1 + arrowSize);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(x, y2);
+      ctx.lineTo(x - arrowHalf, y2 - arrowSize);
+      ctx.lineTo(x + arrowHalf, y2 - arrowSize);
+      ctx.closePath();
+      ctx.fill();
+
+      if (text) {
+        const textX = side === 'left' ? x - 8 : x + 8;
+        const midY = (y1 + y2) / 2;
+        drawTextWithBg(text, textX, midY, { align: side === 'left' ? 'right' : 'left' });
+      }
+      ctx.restore();
+    };
+
+    // ── LEVEL 1 (Bottom): Overall Bridge Width ──
+    const Y_OVERALL = baseY + 70;
+    const overallWidthM = totalDeckWidth / 1000;
+    const labelOverall = userHasCarriageway
+      ? `Overall Bridge Width = ${overallWidthM.toFixed(2)} m`
+      : 'Overall Bridge Width';
+    drawDimensionArrow(deckLeftX, Y_OVERALL, deckRightX, Y_OVERALL, labelOverall, 'up', fpTopY);
+
+    // ── LEVEL 2 (Bottom): Overhang ──
+    const Y_OVERHANG = baseY + 35;
+    const overhangM = deckOverhang / 1000;
+    const labelOverhang = userHasCarriageway
+      ? `Overhang = ${overhangM.toFixed(2)} m`
+      : 'Overhang';
+    if (positions.length > 0) {
+      drawDimensionArrow(deckLeftX, Y_OVERHANG, positions[0], Y_OVERHANG, labelOverhang, 'up', deckBottomY);
     }
 
-    // Carriageway Width
-    drawDimArrow(leftBarrierEndX, yDimTop, rightBarrierX, yDimTop, `Carriageway = ${(carriagewayWidth / 1000).toFixed(2)} m`);
+    // ── LEVEL 2 (Bottom): Girder Spacing ──
+    const Y_GIRDER_SPACING = baseY + 35;
+    const gsM = (girderSpacing || 2750) / 1000;
+    const labelGs = userHasCarriageway
+      ? `Girder Spacing = ${gsM.toFixed(2)} m`
+      : 'Girder Spacing';
+    if (numGirders > 1 && positions.length >= 2) {
+      // Shift to second pair if available to avoid overlap with overhang label (matching desktop)
+      const xLeft = numGirders > 2 ? positions[1] : positions[0];
+      const xRight = numGirders > 2 ? positions[2] : positions[1];
+      drawDimensionArrow(xLeft, Y_GIRDER_SPACING, xRight, Y_GIRDER_SPACING, labelGs, 'up', baseY);
+    }
+
+    // ── LEVEL 3 (Middle): Deck Thickness ──
+    const deckCenterXM = (leftBarrierX + rightBarrierEndX) / 2;
+    const localDeckTopYM = deckTopY + computeSlopeOffset(deckCenterXM);
+    const labelDt = userHasCarriageway
+      ? `Deck Thickness = ${deckThickness.toFixed(0)} mm`
+      : 'Deck Thickness';
+
+    ctx.save();
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(deckCenterXM, localDeckTopYM);
+    ctx.lineTo(deckCenterXM, deckBottomY);
+    ctx.stroke();
+
+    const dtTick = 4;
+    ctx.beginPath();
+    ctx.moveTo(deckCenterXM - dtTick, localDeckTopYM);
+    ctx.lineTo(deckCenterXM + dtTick, localDeckTopYM);
+    ctx.moveTo(deckCenterXM - dtTick, deckBottomY);
+    ctx.lineTo(deckCenterXM + dtTick, deckBottomY);
+    ctx.stroke();
+
+    const dtArrowSize = 3.5;
+    const dtArrowHalf = 1.75;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.moveTo(deckCenterXM, localDeckTopYM);
+    ctx.lineTo(deckCenterXM - dtArrowHalf, localDeckTopYM + dtArrowSize);
+    ctx.lineTo(deckCenterXM + dtArrowHalf, localDeckTopYM + dtArrowSize);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(deckCenterXM, deckBottomY);
+    ctx.lineTo(deckCenterXM - dtArrowHalf, deckBottomY - dtArrowSize);
+    ctx.lineTo(deckCenterXM + dtArrowHalf, deckBottomY - dtArrowSize);
+    ctx.closePath();
+    ctx.fill();
+
+    drawTextWithBg(labelDt, deckCenterXM, localDeckTopYM - 8, { align: 'center' });
+    ctx.restore();
+
+    // ── LEVEL 4 (Top): Footpath Width & Carriageway Width ──
+    const Y_TOP_COMMON = deckTopY - 35;
+
+    if (leftRailingPresent && leftFpWPx > 0) {
+      const labelFp = userHasCarriageway
+        ? `Footpath Width = ${(footpathWidth / 1000).toFixed(2)} m`
+        : 'Footpath Width';
+      drawDimensionArrow(leftFpX, Y_TOP_COMMON, leftBarrierX, Y_TOP_COMMON, labelFp, 'down', fpTopY);
+    }
+
+    const renderedCbWPx = 450 * baseScale;
+    const leftBarrierVisualEnd = leftBarrierX + renderedCbWPx;
+    const rightBarrierVisualStart = rightBarrierEndX - renderedCbWPx;
+    const cwM = carriagewayWidth / 1000;
+    const labelCw = userHasCarriageway
+      ? `Carriageway Width = ${cwM.toFixed(2)} m`
+      : 'Carriageway Width';
+    drawDimensionArrow(leftBarrierVisualEnd, Y_TOP_COMMON, rightBarrierVisualStart, Y_TOP_COMMON, labelCw, 'down', deckTopY);
+
+    if (rightRailingPresent && rightFpWPx > 0) {
+      const labelFp = userHasCarriageway
+        ? `Footpath Width = ${(footpathWidth / 1000).toFixed(2)} m`
+        : 'Footpath Width';
+      drawDimensionArrow(rightBarrierEndX, Y_TOP_COMMON, deckRightX - rightRailWPx, Y_TOP_COMMON, labelFp, 'down', fpTopY);
+    }
+
+    // Footpath Thickness
+    if (leftRailingPresent && leftFpWPx > 0) {
+      const labelFt = userHasCarriageway
+        ? `Footpath\nThickness\n= ${footpathThickness.toFixed(0)} mm`
+        : 'Footpath\nThickness';
+      drawVerticalDimensionArrow(deckLeftX - 8, fpTopY, deckBottomY, labelFt, 'left');
+    }
 
     ctx.restore();
   }, [
@@ -577,11 +940,13 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
     panOffset,
     scaleFactor,
     inputs,
+    additionalInputs,
     hoveredElement,
     computeTotalDeckWidth,
     spanLength,
     numGirders,
     carriagewayWidth,
+    girderSpacing,
     medianPresent,
     medianWidth,
     deckThickness,
@@ -599,6 +964,7 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
     botFlangeT,
     webT,
     stiffenerW,
+    userHasCarriageway,
   ]);
 
   if (!visible) return null;
@@ -670,60 +1036,66 @@ export const CadCrossSectionDock: React.FC<CadCrossSectionDockProps> = ({
           onClick={() => setZoomLevel((prev) => Math.min(prev * 1.15, 4.0))}
           title="Zoom In"
           style={{
-            width: '26px',
-            height: '26px',
-            background: 'rgba(255, 255, 255, 0.9)',
+            width: '25px',
+            height: '25px',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            color: '#333333',
             border: '1px solid #999',
             borderRadius: '3px',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            padding: 0,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#333',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           }}
         >
-          <ZoomIn size={14} />
+          +
         </button>
         <button
           type="button"
           onClick={() => setZoomLevel((prev) => Math.max(prev / 1.15, 0.3))}
           title="Zoom Out"
           style={{
-            width: '26px',
-            height: '26px',
-            background: 'rgba(255, 255, 255, 0.9)',
+            width: '25px',
+            height: '25px',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            color: '#333333',
             border: '1px solid #999',
             borderRadius: '3px',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            padding: 0,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#333',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           }}
         >
-          <ZoomOut size={14} />
+          -
         </button>
         <button
           type="button"
           onClick={handleFitToScreen}
           title="Fit to screen"
           style={{
-            width: '26px',
-            height: '26px',
-            background: 'rgba(255, 255, 255, 0.9)',
+            width: '25px',
+            height: '25px',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
             border: '1px solid #999',
             borderRadius: '3px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#333',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            padding: '2px',
           }}
         >
-          <Maximize2 size={13} />
+          <img src="/vectors/fit_to_screen.svg" alt="Fit to screen" style={{ width: '18px', height: '18px' }} />
         </button>
       </div>
 
