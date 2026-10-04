@@ -152,7 +152,8 @@ export const CadDualViewDock: React.FC<CadDualViewDockProps> = ({
             style={{
               height: showTopView ? `${splitRatio * 100}%` : '100%',
               position: 'relative',
-              overflow: 'hidden',
+              overflow: 'auto',  /* mirrors desktop QScrollArea with ScrollBarAlwaysOn */
+              borderBottom: showTopView ? '1px solid var(--border-color)' : 'none',
             }}
           >
             <CadCrossSectionDock isStandalone={false} />
@@ -182,7 +183,7 @@ export const CadDualViewDock: React.FC<CadDualViewDockProps> = ({
             style={{
               height: showCrossSection ? `${(1 - splitRatio) * 100}%` : '100%',
               position: 'relative',
-              overflow: 'hidden',
+              overflow: 'auto',  /* mirrors desktop QScrollArea with ScrollBarAlwaysOn */
             }}
           >
             <CadTopViewDock isStandalone={false} />
