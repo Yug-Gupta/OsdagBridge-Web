@@ -1,11 +1,8 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import {
   OrbitControls,
   PerspectiveCamera,
-  GizmoHelper,
-  GizmoViewcube,
-  GizmoViewport,
   Html,
   Line,
 } from '@react-three/drei';
@@ -13,6 +10,8 @@ import * as THREE from 'three';
 import { useBridgeStore, type CadDisplayState } from '../../store/useBridgeStore';
 import type { ViewerCadModel } from '../../types/viewerCadModel';
 import { CrashBarrierGeometry, MedianGeometry, RailingGeometry } from '../../utils/irc5Geometry';
+import { NavCube } from './cad/NavCube';
+import { AxisTriad } from './cad/AxisTriad';
 
 /**
  * Desktop CAD Color Palette (from osdagbridge.desktop.ui.cad_3d.py)
@@ -39,6 +38,22 @@ interface HoverInfo {
   title: string;
   x: number;
   y: number;
+}
+
+// ── CAMERA EXPORTER (bridges Three.js camera to React state outside Canvas) ──
+// Fires once when the camera/controls instance is ready, then never again.
+// NavCube + AxisTriad read the camera object reference each rAF; they don't
+// need BridgeViewer to re-render every frame.
+function CameraExporter({
+  onCamera,
+}: {
+  onCamera: (cam: THREE.Camera, ctrl: any) => void;
+}) {
+  const { camera, controls } = useThree();
+  useEffect(() => {
+    onCamera(camera, controls);
+  }, [camera, controls, onCamera]);
+  return null;
 }
 
 // ── CAMERA CONTROLLER ────────────────────────────────────────────────────────
@@ -1400,12 +1415,20 @@ export interface BridgeViewerProps {
 export const BridgeViewer: React.FC<BridgeViewerProps> = ({
   params,
   showDeck,
-  darkMode = true,
+  darkMode = false,
   cadDisplay,
   cadZoom = 1,
   activeNavTool = 'rotate',
 }) => {
   const { cadCameraTrigger } = useBridgeStore();
+
+  // Camera ref for NavCube / AxisTriad overlay components
+  const [liveCam, setLiveCam] = useState<THREE.Camera | null>(null);
+  const [liveCtrl, setLiveCtrl] = useState<any>(null);
+  const handleCameraExport = useCallback((cam: THREE.Camera, ctrl: any) => {
+    setLiveCam(cam);
+    setLiveCtrl(ctrl);
+  }, []);
 
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
 
@@ -1448,6 +1471,7 @@ export const BridgeViewer: React.FC<BridgeViewerProps> = ({
         }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.setClearColor(0x000000, 0); // let CSS background gradient show through
         }}
       >
         <PerspectiveCamera
@@ -1458,24 +1482,27 @@ export const BridgeViewer: React.FC<BridgeViewerProps> = ({
           far={1000}
         />
 
+        <CameraExporter onCamera={handleCameraExport} />
         <CameraController spanL={L} trigger={cadCameraTrigger} />
 
-        <ambientLight intensity={darkMode ? 0.35 : 0.55} />
+        {/* Lighting – mimics desktop OCC viewer warm overhead fill */}
+        <ambientLight intensity={darkMode ? 0.4 : 0.65} />
         <hemisphereLight
           args={[
-            darkMode ? '#94a3b8' : '#ffffff',
-            darkMode ? '#0f172a' : '#888888',
-            0.5,
+            darkMode ? '#b0bec5' : '#ffffff',
+            darkMode ? '#263238' : '#9e9e9e',
+            darkMode ? 0.45 : 0.6,
           ]}
         />
         <directionalLight
-          position={[15, 22, 14]}
-          intensity={darkMode ? 1.2 : 1.4}
+          position={[20, 30, 20]}
+          intensity={darkMode ? 1.1 : 1.3}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
         />
-        <directionalLight position={[-12, 10, -12]} intensity={0.4} />
+        <directionalLight position={[-15, 12, -15]} intensity={darkMode ? 0.35 : 0.45} />
+        <directionalLight position={[0, -10, 0]} intensity={0.1} />
 
         <OrbitControls
           makeDefault
@@ -1483,9 +1510,9 @@ export const BridgeViewer: React.FC<BridgeViewerProps> = ({
           enablePan={activeNavTool === 'pan' || activeNavTool === 'rotate'}
           enableZoom
           enableDamping
-          dampingFactor={0.1}
+          dampingFactor={0.08}
           minDistance={2}
-          maxDistance={250}
+          maxDistance={300}
           screenSpacePanning
           mouseButtons={{
             LEFT: activeNavTool === 'pan' ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
@@ -1494,32 +1521,23 @@ export const BridgeViewer: React.FC<BridgeViewerProps> = ({
           }}
         />
 
-        {/* Scaled bridge model */}
+        {/* Bridge model */}
         {params && (
-          <group scale={cadZoom}>
-            <FullBridgeModel p={params} onHover={handleHover} onLeave={handleLeave} />
-          </group>
-        )}
-
-        {/* ── GIZMOS & NAVCUBE ── */}
-        <GizmoHelper alignment="top-right" margin={[60, 60]}>
-          <GizmoViewcube
-            color="#f1f5f9"
-            strokeColor="#94a3b8"
-            textColor="#0f172a"
-            faces={['Right', 'Left', 'Top', 'Bottom', 'Front', 'Back']}
-          />
-        </GizmoHelper>
-
-        {cadDisplay?.axis && (
-          <GizmoHelper alignment="bottom-right" margin={[70, 70]}>
-            <GizmoViewport
-              axisColors={['#d91a1a', '#005900', '#1a1ad9']}
-              labelColor="#ffffff"
-            />
-          </GizmoHelper>
+          <FullBridgeModel p={params} onHover={handleHover} onLeave={handleLeave} />
         )}
       </Canvas>
+
+      {/* ── NAVCUBE OVERLAY (top-right, HTML over Canvas) ── */}
+      <NavCube
+        camera={liveCam}
+        controls={liveCtrl}
+        darkMode={darkMode}
+      />
+
+      {/* ── AXIS TRIAD OVERLAY (bottom-right, only when axis display enabled) ── */}
+      {cadDisplay?.axis && (
+        <AxisTriad camera={liveCam} size={84} armLen={28} />
+      )}
 
       {/* ── DESKTOP LEGEND / INFO TABLE OVERLAY (CAD 3D ONLY) ── */}
       {cadDisplay?.legend && params && (
