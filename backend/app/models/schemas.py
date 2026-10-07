@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any, Union
 
+#Changed label property to Optional[str] = None to accommodate module type ui fields with "None" as label
 class UIFieldSchema(BaseModel):
     key: str
-    label: str
+    label: Optional[str] = None
     ui_type: str = Field(..., description="'number' | 'text' | 'select' | 'button'")
     default: Optional[Union[float, int, str, bool]] = None
     min: Optional[float] = None
@@ -15,6 +16,8 @@ class UIFieldSchema(BaseModel):
     placeholder: Optional[str] = None
     required: bool = False
     action: Optional[str] = None
+    visibility: Optional[bool] = True
+    validator: Optional[str ] = None
 
 class ValidateFieldRequest(BaseModel):
     key: str
