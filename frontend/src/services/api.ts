@@ -149,9 +149,11 @@ async function loadMockSchema(): Promise<UIFieldSchema[]> {
 function isSchemaField(value: unknown): value is UIFieldSchema {
   if (!value || typeof value !== 'object') return false;
   const field = value as Record<string, unknown>;
-  return typeof field.key === 'string'
-    && typeof field.label === 'string'
-    && typeof field.ui_type === 'string';
+  return (
+    typeof field.key === 'string' &&
+    (field.label === null || field.label === undefined || typeof field.label === 'string') &&
+    typeof field.ui_type === 'string'
+  );
 }
 
 /** Accept both a raw field array and wrapped `{ fields | schema | basic }` payloads. */
@@ -185,24 +187,36 @@ function listFromUnknown(data: unknown, keys: string[]): unknown[] {
 }
 
 /**
- * Fetch the input schema from GET /api/v1/schema.
- * Falls back to mock-schema.json when that endpoint is not ready.
+ * Fetch the input schema from GET /api/v1/schema or /api/v1/schema/basic.
  */
 export async function fetchBasicSchema(): Promise<UIFieldSchema[]> {
+  const tryGet = async (path: string) => {
+    const res = await apiClient.get(path);
+    return normalizeSchemaPayload(res.data);
+  };
+
   try {
-    const res = await apiClient.get('/schema');
-    const fields = normalizeSchemaPayload(res.data);
+    const fields = await tryGet('/schema');
     if (fields.length === 0) {
       throw new Error('Empty schema payload');
     }
     isBackendAvailable = true;
     return fields;
   } catch (error) {
+    try {
+      const fields = await tryGet('/schema/basic');
+      if (fields.length > 0) {
+        isBackendAvailable = true;
+        return fields;
+      }
+    } catch {
+      // ignore secondary error
+    }
     isBackendAvailable = false;
-    console.info('Schema API unavailable — using local mock-schema.json', error);
-    return loadMockSchema();
+    throw error;
   }
 }
+
 
 /**
  * Fetch the Additional Inputs schema from GET /api/v1/schema/additional-inputs.
@@ -288,25 +302,29 @@ export async function fetchResultSchemas(): Promise<ResultSchemas> {
 }
 
 /**
- * POST /api/v1/validate — live field validation when the backend is ready.
+ * POST /api/v1/validate/field or /api/v1/validate — live field validation against IRC/Osdag constraints.
  */
-export async function validateInputs(payload: {
-  key: string;
-  value: unknown;
-  all_inputs: Record<string, unknown>;
-}): Promise<ValidateFieldResponse | null> {
-  if (!isBackendAvailable) return null;
-
+export async function validateInputs(
+  payload: { key: string; value: unknown; all_inputs?: Record<string, unknown> }
+): Promise<ValidateFieldResponse | null> {
   const tryPost = async (path: string) => {
     const res = await apiClient.post<ValidateFieldResponse>(path, payload);
     return res.data;
   };
 
   try {
-    return await tryPost('/validate');
-  } catch (error) {
-    console.warn('Input validation API unavailable; using client-side validation.', error);
-    return null;
+    const data = await tryPost('/validate/field');
+    isBackendAvailable = true;
+    return data;
+  } catch (err) {
+    try {
+      const data = await tryPost('/validate');
+      isBackendAvailable = true;
+      return data;
+    } catch (secondErr) {
+      console.warn('Input validation API error:', secondErr);
+      return null;
+    }
   }
 }
 
@@ -332,10 +350,10 @@ export async function fetchSteelMaterials(): Promise<SteelMaterial[]> {
       })
       .filter((m): m is SteelMaterial => Boolean(m));
     if (mapped.length > 0) return mapped;
-  } catch {
-    // placeholder catalog
+  } catch (err) {
+    console.error('Failed to fetch steel materials:', err);
   }
-  return MOCK_STEEL;
+  return [];
 }
 
 export async function fetchConcreteMaterials(): Promise<ConcreteMaterial[]> {
@@ -359,10 +377,10 @@ export async function fetchConcreteMaterials(): Promise<ConcreteMaterial[]> {
       })
       .filter((m): m is ConcreteMaterial => Boolean(m));
     if (mapped.length > 0) return mapped;
-  } catch {
-    // placeholder catalog
+  } catch (err) {
+    console.error('Failed to fetch concrete materials:', err);
   }
-  return MOCK_CONCRETE;
+  return [];
 }
 
 export async function fetchRolledSections(): Promise<RolledSection[]> {
@@ -378,15 +396,17 @@ export async function fetchRolledSections(): Promise<RolledSection[]> {
           if (!designation) return null;
           return {
             designation,
-            type: typeof r.type === 'string' ? r.type : undefined,
+            type: typeof r.type_name === 'string' ? r.type_name : typeof r.type === 'string' ? r.type : undefined,
+            ...r,
           } as RolledSection;
         }
         return null;
       })
       .filter((s): s is RolledSection => Boolean(s));
     if (mapped.length > 0) return mapped;
-  } catch {
-    // placeholder catalog
+  } catch (err) {
+    console.error('Failed to fetch rolled sections:', err);
   }
-  return MOCK_ROLLED;
+  return [];
 }
+

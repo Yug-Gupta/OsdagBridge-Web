@@ -379,13 +379,13 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
         if (f.key === 'project.location') {
           const hasLoc = Boolean(location) || Boolean(inputs['project.location']);
           if (!hasLoc) {
-            emptyWidgets.push({ key: f.key, label: f.label });
+            emptyWidgets.push({ key: f.key, label: f.label || f.key });
             nextFieldErrors[f.key] = true;
           }
         } else {
           const val = inputs[f.key];
           if (val === '' || val === null || val === undefined) {
-            emptyWidgets.push({ key: f.key, label: f.label });
+            emptyWidgets.push({ key: f.key, label: f.label || f.key });
             nextFieldErrors[f.key] = true;
           }
         }
@@ -396,7 +396,7 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
       set({ fieldErrors: nextFieldErrors });
       const msg =
         'Please fill in the required(*) fields before proceeding:\n' +
-        emptyWidgets.map((w) => ` - ${w.label.replace('\n', ' ')}`).join('\n');
+        emptyWidgets.map((w) => ` - ${(w.label || w.key).replace('\n', ' ')}`).join('\n');
       get().showMessageModal({
         title: 'Empty Required Fields',
         message: msg,
@@ -434,9 +434,14 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
       const concreteGrades = concreteMaterials.map((m) => m.grade);
 
       const enriched = schemaData.map((f) => {
-        // Only fall back to the catalog when the schema has no options of its
-        // own (the desktop schema already carries the real DB grades).
-        if (f.key === INPUT_KEYS.girder && (f.options?.length ?? 0) === 0 && steelNames.length > 0) {
+        // Enforce backend material options when available
+        if (
+          (f.key === INPUT_KEYS.girder ||
+           f.key === INPUT_KEYS.crossBracing ||
+           f.key === INPUT_KEYS.endDiaphragm) &&
+          (f.options?.length ?? 0) === 0 &&
+          steelNames.length > 0
+        ) {
           return { ...f, options: steelNames };
         }
         if (f.key === INPUT_KEYS.deck && (f.options?.length ?? 0) === 0 && concreteGrades.length > 0) {
@@ -448,9 +453,7 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
       const initialInputs: Record<string, any> = { ...get().inputs };
       enriched.forEach((f) => {
         // Skip null defaults — fields like geometry.span have default=null intentionally
-        // so they remain unset until the user types a value. Writing null would cause
-        // hasUserSpan() / hasUserCarriagewayWidth() to see a non-undefined value and
-        // potentially misreport the "user entered" state.
+        // so they remain unset until the user types a value.
         if (f.default !== undefined && f.default !== null && initialInputs[f.key] === undefined) {
           initialInputs[f.key] = f.default;
         }
@@ -465,7 +468,7 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
         rolledSections,
       });
     } catch (err) {
-      console.error('Failed to load schema', err);
+      console.error('Failed to load schema from backend', err);
       set({
         schemaLoading: false,
         schemaError: err instanceof Error ? err.message : 'Unable to load schema definitions.',
@@ -480,16 +483,22 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
     // 1. Client-side schema constraints check
     if (field) {
       if (field.required && (value === '' || value === null || value === undefined)) {
-        get().setValidationError(key, `${field.label} is required`);
+        get().setValidationError(key, `${field.label || field.key} is required`);
         return;
       }
-      if (field.ui_type === 'number' && value !== '' && value !== null && value !== undefined) {
+      const isNum =
+        field.ui_type === 'number' ||
+        field.validator === 'Double Validator' ||
+        field.validator === 'Integer Validator' ||
+        typeof field.min === 'number';
+
+      if (isNum && value !== '' && value !== null && value !== undefined) {
         const numVal = Number(value);
-        if (field.min !== undefined && numVal < field.min) {
+        if (field.min !== undefined && field.min !== null && numVal < field.min) {
           get().setValidationError(key, `Minimum value is ${field.min}${field.unit ? ' ' + field.unit : ''}`);
           return;
         }
-        if (field.max !== undefined && numVal > field.max) {
+        if (field.max !== undefined && field.max !== null && numVal > field.max) {
           get().setValidationError(key, `Maximum value is ${field.max}${field.unit ? ' ' + field.unit : ''}`);
           return;
         }
@@ -498,10 +507,6 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
 
     // Clear local error if client schema bounds pass
     get().setValidationError(key, null);
-
-    if (!isBackendAvailable) {
-      return;
-    }
 
     try {
       const res = await validateInputs({
@@ -522,6 +527,7 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
       console.warn('Input validation failed; client-side validation remains active.', err);
     }
   },
+
 
   resetInputs: () => {
     const { schema } = get();

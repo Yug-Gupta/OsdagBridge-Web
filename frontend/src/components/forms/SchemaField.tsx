@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { UIFieldSchema } from '../../types/schema';
 import { useBridgeStore } from '../../store/useBridgeStore';
+import { validateInputs } from '../../services/api';
 import { AlertCircle } from 'lucide-react';
+
 
 export type FieldRenderer = React.FC<{ field: UIFieldSchema }>;
 
@@ -22,7 +24,7 @@ const labelStyle: React.CSSProperties = {
 };
 
 function FieldLabel({ field, htmlFor }: { field: UIFieldSchema; htmlFor?: string }) {
-  let displayLabel = field.label;
+  let displayLabel = field.label || field.key;
   if (field.required) {
     if (displayLabel.includes('\n')) {
       const idx = displayLabel.indexOf('\n');
@@ -80,6 +82,17 @@ const ButtonField: FieldRenderer = ({ field }) => {
     ? `${location.station}, ${location.state}`
     : (inputs['project.location'] || 'Not Selected');
 
+  const buttonText =
+    field.button_label ||
+    (field.key === 'project.location' || field.action === 'show_project_location_dialog'
+      ? 'Select Location'
+      : field.key === 'geometry.additional_btn' || field.action === 'show_additional_inputs'
+      ? 'Modify Here'
+      : field.label || 'Action');
+
+  const showLocationPin =
+    (field.key === 'project.location' || field.post_row?.kind === 'info_row') && hasLocation;
+
   return (
     <div style={{ marginBottom: '8px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -87,15 +100,19 @@ const ButtonField: FieldRenderer = ({ field }) => {
         <button
           type="button"
           disabled={isLocked}
-          aria-label={field.button_label || field.label}
+          aria-label={buttonText}
           onClick={() => {
             clearFieldError(field.key);
             if (
               field.action === 'open_project_location_modal' ||
-              field.action === 'show_project_location_dialog'
+              field.action === 'show_project_location_dialog' ||
+              field.key === 'project.location'
             ) {
               setLocationModalOpen(true);
-            } else if (field.action === 'show_additional_inputs') {
+            } else if (
+              field.action === 'show_additional_inputs' ||
+              field.key === 'geometry.additional_btn'
+            ) {
               setAdditionalInputsOpen(true);
             }
           }}
@@ -106,11 +123,11 @@ const ButtonField: FieldRenderer = ({ field }) => {
             opacity: isLocked ? 0.65 : 1,
           }}
         >
-          {field.button_label || field.label}
+          {buttonText}
         </button>
       </div>
 
-      {field.post_row?.kind === 'info_row' && hasLocation && (
+      {showLocationPin && (
         <div
           style={{
             display: 'flex',
@@ -173,22 +190,27 @@ const SelectField: FieldRenderer = ({ field }) => {
   const fieldId = `field-${field.key}`;
   const errorId = `${fieldId}-error`;
 
-  const isConcrete = field.is_material_field && /concrete|deck/i.test(`${field.key} ${field.group ?? ''}`);
-  const customOptions = field.is_material_field
+  const isMaterial = Boolean(
+    field.is_material_field ||
+    field.group === 'Material Inputs' ||
+    field.key.startsWith('material.')
+  );
+  const isConcrete = isMaterial && /concrete|deck/i.test(`${field.key} ${field.group ?? ''}`);
+  const customOptions = isMaterial
     ? Object.values(customMaterials)
         .filter((m) => (isConcrete ? m.memberType === 'Concrete' : m.memberType === 'Steel'))
         .map((m) => m.name)
     : [];
 
   let mergedOptions = Array.from(new Set([...(field.options ?? []), ...customOptions]));
-  if (field.is_material_field) {
+  if (isMaterial) {
     mergedOptions = [...mergedOptions.filter((opt) => opt !== 'Custom'), 'Custom'];
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newVal = e.target.value;
     clearFieldError(field.key);
-    if (field.is_material_field && newVal === 'Custom') {
+    if (isMaterial && newVal === 'Custom') {
       openMaterialInfo(field.key, false);
       return;
     }
@@ -220,7 +242,10 @@ const SelectField: FieldRenderer = ({ field }) => {
               <option
                 key={opt}
                 value={opt}
-                disabled={field.disabled_options?.includes(opt)}
+                disabled={
+                  field.disabled_options?.includes(opt) ||
+                  (field.key === 'structure.type' && opt === 'Other')
+                }
               >
                 {opt}
               </option>
@@ -228,11 +253,11 @@ const SelectField: FieldRenderer = ({ field }) => {
           </select>
 
           {/* Desktop Material Info (ℹ) button */}
-          {field.is_material_field && (
+          {isMaterial && (
             <button
               type="button"
               title="View material properties"
-              aria-label={`View properties for ${field.label}`}
+              aria-label={`View properties for ${field.label || field.key}`}
               onClick={() => openMaterialInfo(field.key, true)}
               style={{
                 background: 'transparent',
@@ -317,6 +342,7 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
     updateField,
     validateFieldLive,
     validateBasicInputs,
+    setValidationError,
     showMessageModal,
     validationErrors,
     fieldErrors,
@@ -330,7 +356,13 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
   const [localVal, setLocalVal] = useState<string>(value !== null && value !== undefined ? String(value) : '');
   const fieldId = `field-${field.key}`;
   const errorId = `${fieldId}-error`;
-  const isNumber = field.ui_type === 'number';
+  const isNumber =
+    field.ui_type === 'number' ||
+    field.validator === 'Double Validator' ||
+    field.validator === 'Integer Validator' ||
+    typeof field.min === 'number' ||
+    field.unit === 'm' ||
+    field.unit === '°';
 
   useEffect(() => {
     setLocalVal(value !== null && value !== undefined ? String(value) : '');
@@ -338,7 +370,7 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
 
   // Dynamic placeholder resolution (matches desktop _carriageway_placeholder_text)
   let placeholderText = field.placeholder || '';
-  if (field.placeholder_dynamic === '_carriageway_placeholder_text') {
+  if (!placeholderText && (field.placeholder_dynamic === '_carriageway_placeholder_text' || field.key === 'geometry.carriageway_width')) {
     const isMedian = inputs['geometry.include_median'] === 'Yes';
     placeholderText = isMedian ? '7.5–23.6 m' : '4.25–23.6 m';
   }
@@ -350,25 +382,50 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
     updateField(field.key, isNumber && !isNaN(num) && newVal.trim() !== '' ? num : newVal);
   };
 
-  const handleBlur = () => {
+  const handleBlur = async () => {
     const num = Number(localVal);
     const finalVal = isNumber && !isNaN(num) && localVal.trim() !== '' ? num : localVal.trim();
     updateField(field.key, finalVal);
 
-    // Hard validation on focus-out (matches desktop _on_field_edited)
-    const result = validateBasicInputs(field.key, finalVal);
-    if (!result.valid) {
-      showMessageModal({
-        title: 'Input Error',
-        message: result.message || 'Invalid input value.',
-        type: 'warning',
-      });
-      if (result.corrected !== undefined) {
-        setLocalVal(String(result.corrected));
-        updateField(field.key, result.corrected);
+    // Call backend live validation against IRC / Osdag design constraints
+    const res = await validateInputs({
+      key: field.key,
+      value: finalVal,
+      all_inputs: { ...inputs, [field.key]: finalVal },
+    });
+
+    if (res) {
+      if (!res.valid) {
+        showMessageModal({
+          title: 'Input Error',
+          message: res.message || 'Invalid input value.',
+          type: 'warning',
+        });
+        setValidationError(field.key, res.message || 'Invalid input value');
+        if (res.corrected_value !== undefined && res.corrected_value !== null) {
+          setLocalVal(String(res.corrected_value));
+          updateField(field.key, res.corrected_value);
+        }
+      } else {
+        setValidationError(field.key, null);
       }
     } else {
-      validateFieldLive(field.key, finalVal);
+      // Fallback to local validator if backend is unreachable
+      const result = validateBasicInputs(field.key, finalVal);
+      if (!result.valid) {
+        showMessageModal({
+          title: 'Input Error',
+          message: result.message || 'Invalid input value.',
+          type: 'warning',
+        });
+        setValidationError(field.key, result.message || 'Invalid input value');
+        if (result.corrected !== undefined) {
+          setLocalVal(String(result.corrected));
+          updateField(field.key, result.corrected);
+        }
+      } else {
+        setValidationError(field.key, null);
+      }
     }
   };
 
@@ -382,8 +439,8 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
             type={isNumber ? 'number' : 'text'}
             inputMode={isNumber ? 'decimal' : undefined}
             step={field.step ?? (isNumber ? 'any' : undefined)}
-            min={isNumber ? field.min : undefined}
-            max={isNumber ? field.max : undefined}
+            min={isNumber && field.min !== null && field.min !== undefined ? field.min : undefined}
+            max={isNumber && field.max !== null && field.max !== undefined ? field.max : undefined}
             value={localVal}
             placeholder={placeholderText}
             disabled={isLocked}
@@ -427,15 +484,17 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
 
 registerFieldType('button', ButtonField);
 registerFieldType('select', SelectField);
+registerFieldType('combobox', SelectField);
 registerFieldType('dropdown', SelectField);
 registerFieldType('checkbox', CheckboxField);
 registerFieldType('note', NoteField);
 registerFieldType('number', TextOrNumberField);
+registerFieldType('textbox', TextOrNumberField);
 registerFieldType('text', TextOrNumberField);
 
 const UnsupportedField: FieldRenderer = ({ field }) => (
   <p role="alert" style={{ marginBottom: '8px', color: 'var(--danger)', fontSize: '11px' }}>
-    Unsupported input type &quot;{field.ui_type}&quot; for {field.label}.
+    Unsupported input type &quot;{field.ui_type}&quot; for {field.label || field.key}.
   </p>
 );
 
@@ -443,3 +502,4 @@ export const SchemaField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
   const Renderer = fieldRenderers[field.ui_type] ?? UnsupportedField;
   return <Renderer field={field} />;
 };
+

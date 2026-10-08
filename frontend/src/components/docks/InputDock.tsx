@@ -38,7 +38,8 @@ export const InputDock: React.FC = () => {
   };
 
   // Group schema fields by container -> group (mirrors desktop _make_container and _build_field_loop)
-  const containers = schema.reduce<Record<string, Record<string, typeof schema>>>((acc, item) => {
+  const visibleFields = schema.filter((item) => item.visibility !== false);
+  const containers = visibleFields.reduce<Record<string, Record<string, typeof schema>>>((acc, item) => {
     const c = item.container || 'main';
     const g = item.group || 'General Details';
     if (!acc[c]) acc[c] = {};
@@ -48,7 +49,7 @@ export const InputDock: React.FC = () => {
   }, {});
 
   const renderGroup = (groupTitle: string, fields: typeof schema) => {
-    const showTitle = fields[0]?.show_group_title !== false;
+    const showTitle = fields[0]?.show_group_title !== false && groupTitle !== 'Project Location';
     return (
       <div
         key={groupTitle}
@@ -70,6 +71,7 @@ export const InputDock: React.FC = () => {
   };
 
   return (
+
     <div className="osdag-input-dock" style={{
       display: 'flex',
       height: '100%',
@@ -274,7 +276,14 @@ export const InputDock: React.FC = () => {
                   </div>
                 )}
 
+                {!schemaLoading && !schemaError && visibleFields.length === 0 && (
+                  <div style={{ color: 'var(--text-sub)', fontSize: '12px', padding: '16px 8px', textAlign: 'center' }}>
+                    No input fields available in schema.
+                  </div>
+                )}
+
                 {/* Container & Group loop (mirrors desktop _make_container and _build_field_loop) */}
+
                 {Object.entries(containers).map(([containerKey, containerGroups]) => {
                   const isMain = containerKey === 'main';
                   const isCollapsed = Boolean(collapsedContainers[containerKey]);
