@@ -9,9 +9,6 @@ def get_basic_input_schema():
     """
     Returns the schema-driven definition of input fields for the Input Dock.
     """
-<<<<<<< HEAD
-    return BASE_SCHEMA
-=======
     try:
 
         '''
@@ -100,4 +97,3 @@ def get_basic_input_schema():
         print("CORE IMPORT ERROR:", e)
         raise
     return NEW_SCHEMA
->>>>>>> yashvi-endpoints

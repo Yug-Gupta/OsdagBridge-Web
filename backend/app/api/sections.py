@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from typing import List
+from typing import List, Dict, Any
 from app.models.schemas import UIFieldSchema
 
 router = APIRouter(prefix="/sections", tags=["Sections"])
