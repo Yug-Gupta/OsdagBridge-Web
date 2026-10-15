@@ -1,7 +1,10 @@
 export type UIFieldType =
   | 'number'
   | 'text'
+  | 'textbox'
   | 'select'
+  | 'combobox'
+  | 'dropdown'
   | 'button'
   | 'checkbox'
   | 'note'

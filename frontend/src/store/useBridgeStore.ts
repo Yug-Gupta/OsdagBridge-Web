@@ -434,15 +434,23 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
       const concreteGrades = concreteMaterials.map((m) => m.grade);
 
       const enriched = schemaData.map((f) => {
+        let field = { ...f };
+        if (field.group === 'Material Inputs' || field.key.startsWith('material.')) {
+          field.is_material_field = true;
+          field.member_type = /concrete|deck/i.test(`${field.key} ${field.group ?? ''}`) ? 'Deck' : 'Girder';
+        }
+        if (field.key === 'geometry.carriageway_width') {
+          field.placeholder_dynamic = '_carriageway_placeholder_text';
+        }
         // Only fall back to the catalog when the schema has no options of its
         // own (the desktop schema already carries the real DB grades).
-        if (f.key === INPUT_KEYS.girder && (f.options?.length ?? 0) === 0 && steelNames.length > 0) {
-          return { ...f, options: steelNames };
+        if (field.key === INPUT_KEYS.girder && (field.options?.length ?? 0) === 0 && steelNames.length > 0) {
+          return { ...field, options: steelNames };
         }
-        if (f.key === INPUT_KEYS.deck && (f.options?.length ?? 0) === 0 && concreteGrades.length > 0) {
-          return { ...f, options: concreteGrades };
+        if (field.key === INPUT_KEYS.deck && (field.options?.length ?? 0) === 0 && concreteGrades.length > 0) {
+          return { ...field, options: concreteGrades };
         }
-        return f;
+        return field;
       });
 
       const initialInputs: Record<string, any> = { ...get().inputs };
@@ -483,15 +491,18 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
         get().setValidationError(key, `${field.label} is required`);
         return;
       }
-      if (field.ui_type === 'number' && value !== '' && value !== null && value !== undefined) {
+      const isNumType = field.ui_type === 'number' || field.ui_type === 'textbox';
+      if (isNumType && value !== '' && value !== null && value !== undefined) {
         const numVal = Number(value);
-        if (field.min !== undefined && numVal < field.min) {
-          get().setValidationError(key, `Minimum value is ${field.min}${field.unit ? ' ' + field.unit : ''}`);
-          return;
-        }
-        if (field.max !== undefined && numVal > field.max) {
-          get().setValidationError(key, `Maximum value is ${field.max}${field.unit ? ' ' + field.unit : ''}`);
-          return;
+        if (!isNaN(numVal)) {
+          if (field.min != null && numVal < field.min) {
+            get().setValidationError(key, `Minimum value is ${field.min}${field.unit ? ' ' + field.unit : ''}`);
+            return;
+          }
+          if (field.max != null && numVal > field.max) {
+            get().setValidationError(key, `Maximum value is ${field.max}${field.unit ? ' ' + field.unit : ''}`);
+            return;
+          }
         }
       }
     }

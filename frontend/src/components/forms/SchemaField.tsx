@@ -173,22 +173,25 @@ const SelectField: FieldRenderer = ({ field }) => {
   const fieldId = `field-${field.key}`;
   const errorId = `${fieldId}-error`;
 
-  const isConcrete = field.is_material_field && /concrete|deck/i.test(`${field.key} ${field.group ?? ''}`);
-  const customOptions = field.is_material_field
+  const isMaterialField = Boolean(
+    field.is_material_field || field.group === 'Material Inputs' || field.key.startsWith('material.')
+  );
+  const isConcrete = isMaterialField && /concrete|deck/i.test(`${field.key} ${field.group ?? ''}`);
+  const customOptions = isMaterialField
     ? Object.values(customMaterials)
         .filter((m) => (isConcrete ? m.memberType === 'Concrete' : m.memberType === 'Steel'))
         .map((m) => m.name)
     : [];
 
   let mergedOptions = Array.from(new Set([...(field.options ?? []), ...customOptions]));
-  if (field.is_material_field) {
+  if (isMaterialField) {
     mergedOptions = [...mergedOptions.filter((opt) => opt !== 'Custom'), 'Custom'];
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newVal = e.target.value;
     clearFieldError(field.key);
-    if (field.is_material_field && newVal === 'Custom') {
+    if (isMaterialField && newVal === 'Custom') {
       openMaterialInfo(field.key, false);
       return;
     }
@@ -228,7 +231,7 @@ const SelectField: FieldRenderer = ({ field }) => {
           </select>
 
           {/* Desktop Material Info (ℹ) button */}
-          {field.is_material_field && (
+          {isMaterialField && (
             <button
               type="button"
               title="View material properties"
@@ -330,7 +333,14 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
   const [localVal, setLocalVal] = useState<string>(value !== null && value !== undefined ? String(value) : '');
   const fieldId = `field-${field.key}`;
   const errorId = `${fieldId}-error`;
-  const isNumber = field.ui_type === 'number';
+  const isNumber =
+    field.ui_type === 'number' ||
+    (field.ui_type === 'textbox' &&
+      (field.min != null ||
+        field.max != null ||
+        field.step != null ||
+        typeof field.default === 'number' ||
+        Boolean(field.unit)));
 
   useEffect(() => {
     setLocalVal(value !== null && value !== undefined ? String(value) : '');
@@ -338,9 +348,16 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
 
   // Dynamic placeholder resolution (matches desktop _carriageway_placeholder_text)
   let placeholderText = field.placeholder || '';
-  if (field.placeholder_dynamic === '_carriageway_placeholder_text') {
+  if (
+    field.placeholder_dynamic === '_carriageway_placeholder_text' ||
+    field.key === 'geometry.carriageway_width'
+  ) {
     const isMedian = inputs['geometry.include_median'] === 'Yes';
     placeholderText = isMedian ? '7.5–23.6 m' : '4.25–23.6 m';
+  } else if (!placeholderText && field.key === 'geometry.skew_angle') {
+    placeholderText = '-15.0–15.0°';
+  } else if (!placeholderText && field.key === 'geometry.span') {
+    placeholderText = '10.0–45.0 m';
   }
 
   const handleTyping = (newVal: string) => {
@@ -382,8 +399,8 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
             type={isNumber ? 'number' : 'text'}
             inputMode={isNumber ? 'decimal' : undefined}
             step={field.step ?? (isNumber ? 'any' : undefined)}
-            min={isNumber ? field.min : undefined}
-            max={isNumber ? field.max : undefined}
+            min={isNumber && field.min != null ? field.min : undefined}
+            max={isNumber && field.max != null ? field.max : undefined}
             value={localVal}
             placeholder={placeholderText}
             disabled={isLocked}
@@ -428,10 +445,12 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
 registerFieldType('button', ButtonField);
 registerFieldType('select', SelectField);
 registerFieldType('dropdown', SelectField);
+registerFieldType('combobox', SelectField);
 registerFieldType('checkbox', CheckboxField);
 registerFieldType('note', NoteField);
 registerFieldType('number', TextOrNumberField);
 registerFieldType('text', TextOrNumberField);
+registerFieldType('textbox', TextOrNumberField);
 
 const UnsupportedField: FieldRenderer = ({ field }) => (
   <p role="alert" style={{ marginBottom: '8px', color: 'var(--danger)', fontSize: '11px' }}>
@@ -440,6 +459,7 @@ const UnsupportedField: FieldRenderer = ({ field }) => (
 );
 
 export const SchemaField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
-  const Renderer = fieldRenderers[field.ui_type] ?? UnsupportedField;
+  const normalizedType = (field.ui_type || '').toLowerCase();
+  const Renderer = fieldRenderers[normalizedType] ?? fieldRenderers[field.ui_type] ?? UnsupportedField;
   return <Renderer field={field} />;
 };
