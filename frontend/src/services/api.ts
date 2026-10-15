@@ -138,14 +138,6 @@ const MOCK_ROLLED: RolledSection[] = [
   { designation: 'WB 600', type: 'beam' },
 ];
 
-async function loadMockSchema(): Promise<UIFieldSchema[]> {
-  const fallback = await fetch('/mock-schema.json');
-  if (!fallback.ok) {
-    throw new Error('Failed to load mock-schema.json');
-  }
-  return normalizeSchemaPayload(await fallback.json());
-}
-
 function isSchemaField(value: unknown): value is UIFieldSchema {
   if (!value || typeof value !== 'object') return false;
   const field = value as Record<string, unknown>;
@@ -186,7 +178,6 @@ function listFromUnknown(data: unknown, keys: string[]): unknown[] {
 
 /**
  * Fetch the input schema from GET /api/v1/schema.
- * Falls back to mock-schema.json when that endpoint is not ready.
  */
 export async function fetchBasicSchema(): Promise<UIFieldSchema[]> {
   try {
@@ -199,8 +190,7 @@ export async function fetchBasicSchema(): Promise<UIFieldSchema[]> {
     return fields;
   } catch (error) {
     isBackendAvailable = false;
-    console.info('Schema API unavailable — using local mock-schema.json', error);
-    return loadMockSchema();
+    throw error;
   }
 }
 

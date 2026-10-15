@@ -2,7 +2,7 @@ import type { ViewerCadModel } from '../types/viewerCadModel';
 
 /**
  * Backend CAD Adapter
- * 
+ *
  * Normalizes raw backend API responses into the stable ViewerCadModel
  * consumed by the 3D CAD viewer.
  */
