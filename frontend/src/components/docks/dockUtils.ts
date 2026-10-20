@@ -1,7 +1,17 @@
 /**
- * dockUtils.ts - Utility functions for docks in OsdagBridge Web.
- * Mirrors osdagbridge.desktop.ui.docks.dock_utils
+ * dockUtils.ts
+ *
+ * Shared utility functions and style helpers for the dock components.
+ * Adapts osdagbridge.desktop.ui.docks.dock_utils for the web layer.
+ *
+ * apply_field_style from the desktop dock_utils.py is represented here as
+ * getFieldStyle() and getComboboxStyle(), returning React.CSSProperties objects
+ * that dock form fields can spread onto their style prop.
  */
+
+import React from 'react';
+
+// ── Field Style Options ─────────────────────────────────────────────────────────
 
 export interface FieldStyleOptions {
   disabled?: boolean;
@@ -9,8 +19,11 @@ export interface FieldStyleOptions {
   minHeight?: number;
 }
 
+// ── Style Helpers ──────────────────────────────────────────────────────────────
+
 /**
- * Common input field styles matching desktop dock_utils.apply_field_style
+ * Returns common input field styles matching desktop dock_utils.apply_field_style.
+ * Used by text and number fields.
  */
 export const getFieldStyle = (options: FieldStyleOptions = {}): React.CSSProperties => {
   const { disabled = false, hasError = false, minHeight = 28 } = options;
@@ -31,7 +44,8 @@ export const getFieldStyle = (options: FieldStyleOptions = {}): React.CSSPropert
 };
 
 /**
- * Common combobox styles matching desktop dock_utils
+ * Returns common combobox (select) styles matching desktop dock_utils.
+ * Delegates to getFieldStyle since the style set is identical.
  */
 export const getComboboxStyle = (options: FieldStyleOptions = {}): React.CSSProperties => {
   return getFieldStyle(options);

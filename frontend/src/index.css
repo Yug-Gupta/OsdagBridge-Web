@@ -659,6 +659,51 @@ button {
   justify-content: center;
 }
 
+/* ── Dock Status Card (Loading / Error / Empty state) ── */
+.osdag-dock-status {
+  margin: 16px 4px;
+  padding: 12px;
+  border-radius: 4px;
+  background-color: var(--bg-grouped);
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.osdag-dock-status--loading {
+  align-items: center;
+  text-align: center;
+  padding: 20px 10px;
+}
+
+.osdag-dock-status--error {
+  border-color: var(--danger);
+  background-color: var(--danger-bg);
+  color: var(--danger);
+}
+
+.osdag-dock-status__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.osdag-dock-status__message {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-sub);
+}
+
+.osdag-dock-status--error .osdag-dock-status__message {
+  color: var(--text-main);
+}
+
 @keyframes osdag-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

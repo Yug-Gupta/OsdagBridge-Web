@@ -1,5 +1,25 @@
+/**
+ * Header.tsx
+ *
+ * Application menu bar for the OsdagBridge workbench.
+ * Adapts the desktop template_page.py title bar and menu structure for web.
+ *
+ * Structure:
+ *   - Brand area: Osdag logo + application title.
+ *   - Menu bar (nav): File, Graphics, Database, Help drop-down menus.
+ *   - Controls (right): Viewport toggle buttons, theme switcher, Design quick-action.
+ *
+ * Design notes:
+ *   - MenuDropdown is extracted as an inline component to keep menu rendering self-contained.
+ *   - viewControls is a data-driven array; adding a new toolbar button requires only
+ *     a new entry, not additional JSX.
+ *   - Ctrl+S keyboard shortcut mirrors the desktop Save Input binding.
+ */
+
 import React, { useEffect, useRef, useState } from 'react';
 import { useBridgeStore } from '../../store/useBridgeStore';
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
 type MenuItem = {
   label?: string;
@@ -18,7 +38,12 @@ type ViewControl = {
   onClick: () => void;
 };
 
-const VECTOR_BASE = '/vectors/view_btn';
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/** Base path for toolbar vector icons (view_btn directory) */
+const VIEW_BTN_BASE = '/vectors/view_btn';
+
+// ─── MenuDropdown ─────────────────────────────────────────────────────────────
 
 const MenuDropdown: React.FC<{
   title: string;
@@ -82,6 +107,8 @@ const MenuDropdown: React.FC<{
   );
 };
 
+// ─── Header Component ─────────────────────────────────────────────────────────
+
 export const Header: React.FC = () => {
   const {
     activeViewportTab,
@@ -110,15 +137,10 @@ export const Header: React.FC = () => {
     runDesign,
   } = useBridgeStore();
 
-  // Navigate to a viewport tab; for the top-view button mirror the desktop
-  // toggle behaviour (dual <-> plan/cross_section).
-  const showView = (tab: 'plan' | 'cross_section' | 'dual' | '3d' | 'plots') => {
-    setActiveViewportTab(tab);
-  };
-
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
 
+  // Close menus when clicking outside the header
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (headerRef.current && !headerRef.current.contains(e.target as Node)) {
@@ -129,7 +151,7 @@ export const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  // Ctrl+S mirrors desktop Save Input shortcut.
+  // Ctrl+S: mirrors desktop "Save Input" keyboard shortcut
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
@@ -141,33 +163,35 @@ export const Header: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [saveInputs]);
 
+  // ── Menu Definitions ─────────────────────────────────────────────────────────
+
   const menus: { title: string; items: MenuItem[] }[] = [
     {
       title: 'File',
       items: [
-        { label: 'Load Input', shortcut: 'Ctrl+L', action: loadInputs },
+        { label: 'Load Input',           shortcut: 'Ctrl+L',   action: loadInputs },
         { separator: true },
-        { label: 'Save Input', shortcut: 'Ctrl+S', action: saveInputs },
-        { label: 'Save Log Messages', shortcut: 'Alt+M', action: saveLogs },
-        { label: 'Create Design Report', shortcut: 'Alt+C', action: () => setReportModalOpen(true) },
+        { label: 'Save Input',           shortcut: 'Ctrl+S',   action: saveInputs },
+        { label: 'Save Log Messages',    shortcut: 'Alt+M',    action: saveLogs },
+        { label: 'Create Design Report', shortcut: 'Alt+C',    action: () => setReportModalOpen(true) },
         { separator: true },
-        { label: 'Save 3D Model', shortcut: 'Alt+3', action: () => export3DModel('stp') },
-        { label: 'Save CAD Image', shortcut: 'Alt+I', action: exportCadImage },
+        { label: 'Save 3D Model',        shortcut: 'Alt+3',    action: () => export3DModel('stp') },
+        { label: 'Save CAD Image',       shortcut: 'Alt+I',    action: exportCadImage },
         { separator: true },
-        { label: 'Quit', shortcut: 'Shift+Q', action: () => window.close() },
+        { label: 'Quit',                 shortcut: 'Shift+Q',  action: () => window.close() },
       ],
     },
     {
       title: 'Graphics',
       items: [
-        { label: 'Zoom In', shortcut: 'Ctrl+I' },
-        { label: 'Zoom Out', shortcut: 'Ctrl+O' },
-        { label: 'Pan', shortcut: 'Ctrl+P' },
-        { label: 'Rotate 3D Model', shortcut: 'Ctrl+R' },
+        { label: 'Zoom In',              shortcut: 'Ctrl+I' },
+        { label: 'Zoom Out',             shortcut: 'Ctrl+O' },
+        { label: 'Pan',                  shortcut: 'Ctrl+P' },
+        { label: 'Rotate 3D Model',      shortcut: 'Ctrl+R' },
         { separator: true },
-        { label: 'Show Front View', shortcut: 'Alt+Shift+F' },
-        { label: 'Show Top View', shortcut: 'Alt+Shift+T', action: () => setActiveViewportTab('plan') },
-        { label: 'Show Side View', shortcut: 'Alt+Shift+S' },
+        { label: 'Show Front View',      shortcut: 'Alt+Shift+F' },
+        { label: 'Show Top View',        shortcut: 'Alt+Shift+T', action: () => setActiveViewportTab('plan') },
+        { label: 'Show Side View',       shortcut: 'Alt+Shift+S' },
       ],
     },
     {
@@ -175,7 +199,7 @@ export const Header: React.FC = () => {
       items: [
         { label: 'Save Inputs (.csv)' },
         { label: 'Save Outputs (.csv)' },
-        { label: 'Save Inputs (.osi)', action: saveInputs },
+        { label: 'Save Inputs (.osi)',   action: saveInputs },
         {
           label: 'Download Database',
           submenu: [
@@ -186,7 +210,7 @@ export const Header: React.FC = () => {
           ],
         },
         { separator: true },
-        { label: 'Reset', shortcut: 'Alt+R', action: resetInputs },
+        { label: 'Reset',               shortcut: 'Alt+R',    action: resetInputs },
       ],
     },
     {
@@ -203,74 +227,78 @@ export const Header: React.FC = () => {
     },
   ];
 
+  // ── Viewport / Dock Toggle Controls ──────────────────────────────────────────
+
   const viewControls: ViewControl[] = [
     {
       key: 'cross_section',
       tooltip: 'Toggle Cross-Section View',
       active: activeViewportTab !== '3d' && activeViewportTab !== 'plots' && showCrossSection,
-      activeIcon: `${VECTOR_BASE}/cross_section_active.svg`,
-      inactiveIcon: `${VECTOR_BASE}/cross_section_inactive.svg`,
+      activeIcon:   `${VIEW_BTN_BASE}/cross_section_active.svg`,
+      inactiveIcon: `${VIEW_BTN_BASE}/cross_section_inactive.svg`,
       onClick: toggleCrossSection,
     },
     {
       key: 'top_view',
       tooltip: 'Toggle Top View',
       active: activeViewportTab !== '3d' && activeViewportTab !== 'plots' && showTopView,
-      activeIcon: `${VECTOR_BASE}/top_view_active.svg`,
-      inactiveIcon: `${VECTOR_BASE}/top_view_inactive.svg`,
+      activeIcon:   `${VIEW_BTN_BASE}/top_view_active.svg`,
+      inactiveIcon: `${VIEW_BTN_BASE}/top_view_inactive.svg`,
       onClick: toggleTopView,
     },
     {
       key: 'logs_dock',
-      tooltip: 'Toggle Logs Dock',
+      tooltip: 'Toggle Log Dock',
       active: isLogDockOpen,
-      activeIcon: `${VECTOR_BASE}/logs_dock_active.svg`,
-      inactiveIcon: `${VECTOR_BASE}/logs_dock_inactive.svg`,
+      activeIcon:   `${VIEW_BTN_BASE}/logs_dock_active.svg`,
+      inactiveIcon: `${VIEW_BTN_BASE}/logs_dock_inactive.svg`,
       onClick: () => toggleLogDock(),
     },
     {
       key: '3d_cad',
       tooltip: 'Toggle 3D CAD View',
       active: activeViewportTab === '3d',
-      activeIcon: `${VECTOR_BASE}/3d_cad_active.svg`,
-      inactiveIcon: `${VECTOR_BASE}/3d_cad_inactive.svg`,
+      activeIcon:   `${VIEW_BTN_BASE}/3d_cad_active.svg`,
+      inactiveIcon: `${VIEW_BTN_BASE}/3d_cad_inactive.svg`,
       onClick: toggleCad3dView,
     },
     {
       key: 'plots',
-      tooltip: 'Toggle 3D Plots View',
+      tooltip: 'Toggle Plots View',
       active: activeViewportTab === 'plots',
-      activeIcon: `${VECTOR_BASE}/plots_active.svg`,
-      inactiveIcon: `${VECTOR_BASE}/plots_inactive.svg`,
+      activeIcon:   `${VIEW_BTN_BASE}/plots_active.svg`,
+      inactiveIcon: `${VIEW_BTN_BASE}/plots_inactive.svg`,
       onClick: togglePlotsView,
     },
     {
       key: 'input_dock',
       tooltip: 'Toggle Input Dock',
       active: !isDockCollapsed,
-      activeIcon: `${VECTOR_BASE}/input_dock_active.svg`,
-      inactiveIcon: `${VECTOR_BASE}/input_dock_inactive.svg`,
+      activeIcon:   `${VIEW_BTN_BASE}/input_dock_active.svg`,
+      inactiveIcon: `${VIEW_BTN_BASE}/input_dock_inactive.svg`,
       onClick: toggleDock,
     },
     {
       key: 'output_dock',
       tooltip: 'Toggle Output Dock',
       active: !isOutputDockCollapsed,
-      activeIcon: `${VECTOR_BASE}/output_dock_active.svg`,
-      inactiveIcon: `${VECTOR_BASE}/output_dock_inactive.svg`,
+      activeIcon:   `${VIEW_BTN_BASE}/output_dock_active.svg`,
+      inactiveIcon: `${VIEW_BTN_BASE}/output_dock_inactive.svg`,
       onClick: toggleOutputDock,
     },
   ];
 
+  // ── Render ────────────────────────────────────────────────────────────────────
+
   return (
     <header ref={headerRef} role="banner" className="app-header osdag-menubar">
-      {/* Brand / title area (desktop title bar) */}
+      {/* Brand / Logo Area */}
       <div className="osdag-menubar__brand">
         <img src="/vectors/Osdag_logo.svg" alt="Osdag" width={20} height={20} />
         <span className="osdag-menubar__title">OsdagBridge</span>
       </div>
 
-      {/* Menu bar items */}
+      {/* Application Menu Bar */}
       <nav aria-label="Application menu" className="osdag-menubar__menus">
         {menus.map((menu) => (
           <MenuDropdown
@@ -284,7 +312,7 @@ export const Header: React.FC = () => {
         ))}
       </nav>
 
-      {/* Right side: view controls + quick actions */}
+      {/* Right: Viewport Controls + Theme + Design Quick-Action */}
       <div className="osdag-menubar__controls">
         {viewControls.map((ctrl) => (
           <button
@@ -312,7 +340,7 @@ export const Header: React.FC = () => {
           className="osdag-quickbtn"
           onClick={toggleDarkMode}
           title="Toggle theme"
-          aria-label="Toggle theme"
+          aria-label="Toggle dark/light theme"
         >
           {darkMode ? 'Light' : 'Dark'}
         </button>

@@ -1,13 +1,32 @@
+/**
+ * services/api.ts
+ *
+ * Client API services for connecting the frontend to the FastAPI backend.
+ * Uses Vite /api/v1 proxy or VITE_API_BASE_URL environment variable.
+ *
+ * Endpoints:
+ *   - GET /schema            -> fetchBasicSchema (throws on backend failure)
+ *   - GET /location/states   -> fetchLocationStates
+ *   - GET /location/stations -> fetchLocationStations
+ *   - GET /location/details  -> fetchLocationDetails
+ *   - GET /materials/steel   -> fetchSteelMaterials
+ *   - GET /materials/concrete-> fetchConcreteMaterials
+ *   - GET /sections/rolled   -> fetchRolledSections
+ *
+ * All material, section, and location data is fetched directly from the backend
+ * without hard-coded frontend fallback catalogs.
+ */
+
 import axios from 'axios';
-import { UIFieldSchema, ValidateFieldResponse } from '../types/schema';
-import type { BridgeCadParameters } from '../types/bridgeGeometry';
-import { buildMockCadParameters } from '../utils/mockCadParameters';
+import { UIFieldSchema } from '../types/schema';
+import { LocationData } from '../types/location';
 
 export const apiClient = axios.create({
-  baseURL: '/api/v1',
+  baseURL: ((import.meta as any).env?.VITE_API_BASE_URL as string) || '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 5000,
 });
 
 export let isBackendAvailable = false;
@@ -30,139 +49,55 @@ export interface RolledSection {
   type?: string;
 }
 
-// Steel grades exactly as stored in Steel_Grade_Properties table (IS 2062:2011)
-const MOCK_STEEL: SteelMaterial[] = [
-  { name: 'E 250A',  fy: 250, fu: 410, E: 200000 },
-  { name: 'E 250B0', fy: 250, fu: 410, E: 200000 },
-  { name: 'E 250BR', fy: 250, fu: 410, E: 200000 },
-  { name: 'E 250C',  fy: 250, fu: 410, E: 200000 },
-  { name: 'E 275A',  fy: 275, fu: 430, E: 200000 },
-  { name: 'E 275B0', fy: 275, fu: 430, E: 200000 },
-  { name: 'E 275BR', fy: 275, fu: 430, E: 200000 },
-  { name: 'E 275C',  fy: 275, fu: 430, E: 200000 },
-  { name: 'E 300A',  fy: 300, fu: 440, E: 200000 },
-  { name: 'E 300B0', fy: 300, fu: 440, E: 200000 },
-  { name: 'E 300BR', fy: 300, fu: 440, E: 200000 },
-  { name: 'E 300C',  fy: 300, fu: 440, E: 200000 },
-  { name: 'E 350A',  fy: 350, fu: 490, E: 200000 },
-  { name: 'E 350B0', fy: 350, fu: 490, E: 200000 },
-  { name: 'E 350BR', fy: 350, fu: 490, E: 200000 },
-  { name: 'E 350C',  fy: 350, fu: 490, E: 200000 },
-  { name: 'E 410A',  fy: 410, fu: 540, E: 200000 },
-  { name: 'E 410B0', fy: 410, fu: 540, E: 200000 },
-  { name: 'E 410BR', fy: 410, fu: 540, E: 200000 },
-  { name: 'E 410C',  fy: 410, fu: 540, E: 200000 },
-  { name: 'E 450A',  fy: 450, fu: 570, E: 200000 },
-  { name: 'E 450BR', fy: 450, fu: 570, E: 200000 },
-  { name: 'E 550A',  fy: 550, fu: 650, E: 200000 },
-  { name: 'E 550BR', fy: 550, fu: 650, E: 200000 },
-  { name: 'E 600A',  fy: 600, fu: 700, E: 200000 },
-  { name: 'E 600BR', fy: 600, fu: 700, E: 200000 },
-  { name: 'E 650A',  fy: 650, fu: 750, E: 200000 },
-  { name: 'E 650BR', fy: 650, fu: 750, E: 200000 },
-];
-
-// Concrete grades exactly as stored in Concrete_Grade_Properties table
-const MOCK_CONCRETE: ConcreteMaterial[] = [
-  { grade: 'M15', fck: 15, Ecm: 27000 },
-  { grade: 'M20', fck: 20, Ecm: 29000 },
-  { grade: 'M25', fck: 25, Ecm: 30000 },
-  { grade: 'M30', fck: 30, Ecm: 31000 },
-  { grade: 'M35', fck: 35, Ecm: 32000 },
-  { grade: 'M40', fck: 40, Ecm: 33000 },
-  { grade: 'M45', fck: 45, Ecm: 34000 },
-  { grade: 'M50', fck: 50, Ecm: 35000 },
-  { grade: 'M55', fck: 55, Ecm: 36000 },
-  { grade: 'M60', fck: 60, Ecm: 37000 },
-  { grade: 'M65', fck: 65, Ecm: 38000 },
-  { grade: 'M70', fck: 70, Ecm: 39000 },
-  { grade: 'M75', fck: 75, Ecm: 40000 },
-  { grade: 'M80', fck: 80, Ecm: 41000 },
-  { grade: 'M85', fck: 85, Ecm: 42000 },
-  { grade: 'M90', fck: 90, Ecm: 43000 },
-];
-
-
-// Rolled/fabricated beam sections from Beams table (IS 808 + Euronorm)
-const MOCK_ROLLED: RolledSection[] = [
-  // JB — Junior Beams
-  { designation: 'JB 150', type: 'beam' },
-  { designation: 'JB 175', type: 'beam' },
-  { designation: 'JB 200', type: 'beam' },
-  { designation: 'JB 225', type: 'beam' },
-  // LB — Light Beams (IS 808)
-  { designation: 'LB 75',  type: 'beam' },
-  { designation: 'LB 100', type: 'beam' },
-  { designation: 'LB 125', type: 'beam' },
-  { designation: 'LB 150', type: 'beam' },
-  { designation: 'LB 175', type: 'beam' },
-  { designation: 'LB 200', type: 'beam' },
-  { designation: 'LB 225', type: 'beam' },
-  { designation: 'LB 250', type: 'beam' },
-  { designation: 'LB 275', type: 'beam' },
-  { designation: 'LB 300', type: 'beam' },
-  { designation: 'LB 325', type: 'beam' },
-  { designation: 'LB 350', type: 'beam' },
-  { designation: 'LB 400', type: 'beam' },
-  { designation: 'LB 450', type: 'beam' },
-  { designation: 'LB 500', type: 'beam' },
-  { designation: 'LB 550', type: 'beam' },
-  { designation: 'LB 600', type: 'beam' },
-  // MB — Medium Beams (IS 808)
-  { designation: 'MB 100', type: 'beam' },
-  { designation: 'MB 125', type: 'beam' },
-  { designation: 'MB 150', type: 'beam' },
-  { designation: 'MB 175', type: 'beam' },
-  { designation: 'MB 200', type: 'beam' },
-  { designation: 'MB 225', type: 'beam' },
-  { designation: 'MB 250', type: 'beam' },
-  { designation: 'MB 300', type: 'beam' },
-  { designation: 'MB 350', type: 'beam' },
-  { designation: 'MB 400', type: 'beam' },
-  { designation: 'MB 450', type: 'beam' },
-  { designation: 'MB 500', type: 'beam' },
-  { designation: 'MB 550', type: 'beam' },
-  { designation: 'MB 600', type: 'beam' },
-  // WB — Wide Flange Beams (IS 808)
-  { designation: 'WB 150', type: 'beam' },
-  { designation: 'WB 175', type: 'beam' },
-  { designation: 'WB 200', type: 'beam' },
-  { designation: 'WB 225', type: 'beam' },
-  { designation: 'WB 250', type: 'beam' },
-  { designation: 'WB 300', type: 'beam' },
-  { designation: 'WB 350', type: 'beam' },
-  { designation: 'WB 400', type: 'beam' },
-  { designation: 'WB 450', type: 'beam' },
-  { designation: 'WB 500', type: 'beam' },
-  { designation: 'WB 550', type: 'beam' },
-  { designation: 'WB 600', type: 'beam' },
-];
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function isSchemaField(value: unknown): value is UIFieldSchema {
   if (!value || typeof value !== 'object') return false;
   const field = value as Record<string, unknown>;
-  return typeof field.key === 'string'
-    && typeof field.label === 'string'
-    && typeof field.ui_type === 'string';
+  return typeof field.key === 'string' && typeof field.ui_type === 'string';
 }
 
-/** Accept both a raw field array and wrapped `{ fields | schema | basic }` payloads. */
 export function normalizeSchemaPayload(data: unknown): UIFieldSchema[] {
+  let list: unknown[] = [];
   if (Array.isArray(data)) {
-    if (!data.every(isSchemaField)) {
-      throw new Error('Schema payload contains an invalid field definition');
-    }
-    return data;
-  }
-  if (data && typeof data === 'object') {
+    list = data;
+  } else if (data && typeof data === 'object') {
     const obj = data as Record<string, unknown>;
     for (const key of ['fields', 'schema', 'basic', 'input_fields', 'ui_fields']) {
       if (Array.isArray(obj[key])) {
-        return normalizeSchemaPayload(obj[key]);
+        list = obj[key] as unknown[];
+        break;
       }
     }
   }
-  throw new Error('Schema payload must be an array of field definitions');
+
+  if (list.length === 0 || !list.every(isSchemaField)) {
+    throw new Error('Schema payload contains invalid field definitions');
+  }
+
+  // Augment fields with presentation enhancements
+  return (list as UIFieldSchema[]).map((field) => {
+    if (field.key === 'project.location') {
+      return {
+        ...field,
+        button_label: field.button_label || 'Delhi, India',
+        post_row: field.post_row || { kind: 'info_row' },
+      };
+    }
+    if (field.key === 'geometry.additional_btn') {
+      return {
+        ...field,
+        button_label: field.button_label || field.label || 'Additional Geometry',
+      };
+    }
+    if (field.key.startsWith('material.')) {
+      return {
+        ...field,
+        is_material_field: true,
+      };
+    }
+    return field;
+  });
 }
 
 function listFromUnknown(data: unknown, keys: string[]): unknown[] {
@@ -172,19 +107,31 @@ function listFromUnknown(data: unknown, keys: string[]): unknown[] {
     for (const key of keys) {
       if (Array.isArray(obj[key])) return obj[key] as unknown[];
     }
+    // If backend returns a dictionary mapping grade name to properties
+    const entries = Object.entries(obj).map(([key, val]) => {
+      if (val && typeof val === 'object') {
+        return { name: key, grade: key, ...(val as Record<string, unknown>) };
+      }
+      return { name: key, grade: key };
+    });
+    if (entries.length > 0) return entries;
   }
   return [];
 }
 
+// ── Public API Functions ──────────────────────────────────────────────────────
+
 /**
- * Fetch the input schema from GET /api/v1/schema.
+ * Fetch the basic input schema from GET /api/v1/schema.
+ * When backend is unavailable, errors are thrown to the caller so the UI
+ * can remain unloaded and display a clear, user-friendly offline message.
  */
 export async function fetchBasicSchema(): Promise<UIFieldSchema[]> {
   try {
     const res = await apiClient.get('/schema');
     const fields = normalizeSchemaPayload(res.data);
     if (fields.length === 0) {
-      throw new Error('Empty schema payload');
+      throw new Error('Empty schema payload received from backend.');
     }
     isBackendAvailable = true;
     return fields;
@@ -195,111 +142,58 @@ export async function fetchBasicSchema(): Promise<UIFieldSchema[]> {
 }
 
 /**
- * Fetch the Additional Inputs schema from GET /api/v1/schema/additional-inputs.
- * Falls back to the locally extracted mock-madditional-inputs.json (mirrors
- * osdagbridge.core.bridge_types.plate_girder.ui_fields_additional_input).
+ * Fetch environmental/weather constraints for a station from GET /api/v1/location/details.
+ * Directly queries backend; returns null if unavailable.
  */
-export async function fetchAdditionalInputsSchema(): Promise<unknown> {
+export async function fetchLocationDetails(state = 'Delhi', station = 'New Delhi'): Promise<LocationData | null> {
   try {
-    const res = await apiClient.get('/schema/additional-inputs');
-    if (Array.isArray(res.data) && res.data.length > 0) {
-      return res.data;
-    }
-    throw new Error('Empty additional-inputs schema payload');
-  } catch (error) {
-    console.info('Additional Inputs schema API unavailable — using local mock', error);
-    const fallback = await fetch('/mock-additional-inputs.json');
-    if (!fallback.ok) {
-      throw new Error('Failed to load mock-additional-inputs.json');
-    }
-    return fallback.json();
-  }
-}
-
-/**
- * Fetch the 3D CAD parameters for the viewer.
- *
- * Expected backend contract:
- *   POST /api/v1/cad/3d-parameters  { inputs, additional_inputs }
- *   -> BridgeCadParameters (see types/bridgeGeometry.ts)
- *
- * The endpoint should wrap osdagbridge.core get_3d_cad_parameters() so the
- * frontend never sizes members itself. Until it exists, a mock is built from
- * the current inputs so the viewer stays functional.
- */
-export async function fetch3dCadParameters(
-  inputs: Record<string, any>,
-  additionalInputs: Record<string, any>,
-): Promise<BridgeCadParameters> {
-  try {
-    const res = await apiClient.post<BridgeCadParameters>('/cad/3d-parameters', {
-      inputs,
-      additional_inputs: additionalInputs,
+    const res = await apiClient.get<LocationData>('/location/details', {
+      params: { state, station },
     });
-    if (res.data && typeof res.data === 'object' && 'span_length' in res.data) {
+    if (res.data && res.data.state && res.data.station) {
       return res.data;
     }
-    throw new Error('Invalid 3D CAD parameters payload');
+    return null;
   } catch (error) {
-    console.info('3D CAD parameters API unavailable — using local mock', error);
-    return buildMockCadParameters(inputs, additionalInputs);
-  }
-}
-
-/**
- * Result-dialog display schemas (Steel Details / Transverse / Deck summary).
- * Mirrors osdagbridge.core.bridge_types.plate_girder.ui_fields_additional_input.
- * Falls back to the extracted mock so the dialogs stay usable offline.
- */
-export interface ResultSchemas {
-  steelDesignDetails: unknown;
-  transverseMemberDesign: unknown;
-  deckDesignSummary: unknown;
-}
-
-let resultSchemaCache: ResultSchemas | null = null;
-
-export async function fetchResultSchemas(): Promise<ResultSchemas> {
-  if (resultSchemaCache) return resultSchemaCache;
-  try {
-    const res = await apiClient.get<ResultSchemas>('/schema/result-dialogs');
-    if (res.data && typeof res.data === 'object' && 'steelDesignDetails' in res.data) {
-      resultSchemaCache = res.data;
-      return res.data;
-    }
-    throw new Error('Empty result schema payload');
-  } catch (error) {
-    console.info('Result schema API unavailable — using local mock', error);
-    const fallback = await fetch('/mock-result-schemas.json');
-    if (!fallback.ok) throw new Error('Failed to load mock-result-schemas.json');
-    resultSchemaCache = (await fallback.json()) as ResultSchemas;
-    return resultSchemaCache;
-  }
-}
-
-/**
- * POST /api/v1/validate — live field validation when the backend is ready.
- */
-export async function validateInputs(payload: {
-  key: string;
-  value: unknown;
-  all_inputs: Record<string, unknown>;
-}): Promise<ValidateFieldResponse | null> {
-  if (!isBackendAvailable) return null;
-
-  const tryPost = async (path: string) => {
-    const res = await apiClient.post<ValidateFieldResponse>(path, payload);
-    return res.data;
-  };
-
-  try {
-    return await tryPost('/validate');
-  } catch (error) {
-    console.warn('Input validation API unavailable; using client-side validation.', error);
+    console.warn('Backend location details unavailable:', error);
     return null;
   }
 }
 
+/**
+ * Fetch Indian states from GET /api/v1/location/states.
+ * Directly queries backend; returns empty list if unavailable.
+ */
+export async function fetchLocationStates(): Promise<string[]> {
+  try {
+    const res = await apiClient.get<{ states: string[] }>('/location/states');
+    return res.data?.states || [];
+  } catch (error) {
+    console.warn('Backend states unavailable:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch stations for a given state from GET /api/v1/location/stations.
+ * Directly queries backend; returns empty list if unavailable.
+ */
+export async function fetchLocationStations(state: string): Promise<string[]> {
+  try {
+    const res = await apiClient.get<{ state: string; stations: string[] }>('/location/stations', {
+      params: { state },
+    });
+    return res.data?.stations || [];
+  } catch (error) {
+    console.warn('Backend stations unavailable:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch available steel material grades from GET /api/v1/materials/steel.
+ * Directly queries backend; returns empty list if unavailable.
+ */
 export async function fetchSteelMaterials(): Promise<SteelMaterial[]> {
   try {
     const res = await apiClient.get('/materials/steel');
@@ -321,13 +215,17 @@ export async function fetchSteelMaterials(): Promise<SteelMaterial[]> {
         return null;
       })
       .filter((m): m is SteelMaterial => Boolean(m));
-    if (mapped.length > 0) return mapped;
-  } catch {
-    // placeholder catalog
+    return mapped;
+  } catch (error) {
+    console.warn('Backend steel materials unavailable:', error);
+    return [];
   }
-  return MOCK_STEEL;
 }
 
+/**
+ * Fetch available concrete material grades from GET /api/v1/materials/concrete.
+ * Directly queries backend; returns empty list if unavailable.
+ */
 export async function fetchConcreteMaterials(): Promise<ConcreteMaterial[]> {
   try {
     const res = await apiClient.get('/materials/concrete');
@@ -348,13 +246,17 @@ export async function fetchConcreteMaterials(): Promise<ConcreteMaterial[]> {
         return null;
       })
       .filter((m): m is ConcreteMaterial => Boolean(m));
-    if (mapped.length > 0) return mapped;
-  } catch {
-    // placeholder catalog
+    return mapped;
+  } catch (error) {
+    console.warn('Backend concrete materials unavailable:', error);
+    return [];
   }
-  return MOCK_CONCRETE;
 }
 
+/**
+ * Fetch rolled steel sections from GET /api/v1/sections/rolled.
+ * Directly queries backend; returns empty list if unavailable.
+ */
 export async function fetchRolledSections(): Promise<RolledSection[]> {
   try {
     const res = await apiClient.get('/sections/rolled');
@@ -374,9 +276,14 @@ export async function fetchRolledSections(): Promise<RolledSection[]> {
         return null;
       })
       .filter((s): s is RolledSection => Boolean(s));
-    if (mapped.length > 0) return mapped;
-  } catch {
-    // placeholder catalog
+    return mapped;
+  } catch (error) {
+    console.warn('Backend rolled sections unavailable:', error);
+    return [];
   }
-  return MOCK_ROLLED;
+}
+
+/** Display-only — no additional inputs content in UI preview mode. */
+export async function fetchAdditionalInputsSchema(): Promise<unknown[]> {
+  return [];
 }

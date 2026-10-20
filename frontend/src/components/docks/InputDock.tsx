@@ -1,7 +1,23 @@
+/**
+ * InputDock.tsx
+ *
+ * Input dock component for the Highway Bridge Design workbench.
+ * Adapts osdagbridge.desktop.ui.docks.input_dock.InputDock for React.
+ *
+ * Structural organization:
+ *   - Top bar: "Basic Inputs" tab, "Additional Inputs" (display-only), Lock/Unlock toggle.
+ *   - Scroll area: Schema-driven containers & groupboxes (.osdag-groupbox).
+ *   - Offline / unloaded state: When backend is unreachable, the dock remains
+ *     unloaded and presents a clear error state without mock or fallback schemas.
+ *   - Bottom action bar: "Save Input" and "Design" dock buttons.
+ *   - Toggle strip: Expandable indicator strip on the panel edge.
+ */
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useBridgeStore } from '../../store/useBridgeStore';
 import { SchemaField } from '../forms/SchemaField';
-import { Lock, Unlock, Save, Play, ChevronUp, ChevronDown } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { UIFieldSchema } from '../../types/schema';
 
 export const InputDock: React.FC = () => {
   const {
@@ -13,20 +29,21 @@ export const InputDock: React.FC = () => {
     toggleLock,
     isDockCollapsed,
     toggleDock,
-    setAdditionalInputsOpen,
     collapsedContainers,
     toggleContainer,
     saveInputs,
-    runDesign
+    runDesign,
   } = useBridgeStore();
 
   const [showLockTooltip, setShowLockTooltip] = useState(false);
   const tooltipTimerRef = useRef<number | null>(null);
 
+  // Fetch schema on mount
   useEffect(() => {
     fetchSchema();
-  }, []);
+  }, [fetchSchema]);
 
+  // Floating lock notification on click
   const handleScrollAreaClick = () => {
     if (isLocked) {
       setShowLockTooltip(true);
@@ -38,7 +55,7 @@ export const InputDock: React.FC = () => {
   };
 
   // Group schema fields by container -> group (mirrors desktop _make_container and _build_field_loop)
-  const containers = schema.reduce<Record<string, Record<string, typeof schema>>>((acc, item) => {
+  const containers = schema.reduce<Record<string, Record<string, UIFieldSchema[]>>>((acc, item) => {
     const c = item.container || 'main';
     const g = item.group || 'General Details';
     if (!acc[c]) acc[c] = {};
@@ -47,7 +64,7 @@ export const InputDock: React.FC = () => {
     return acc;
   }, {});
 
-  const renderGroup = (groupTitle: string, fields: typeof schema) => {
+  const renderGroup = (groupTitle: string, fields: UIFieldSchema[]) => {
     const showTitle = fields[0]?.show_group_title !== false;
     return (
       <div
@@ -70,15 +87,18 @@ export const InputDock: React.FC = () => {
   };
 
   return (
-    <div className="osdag-input-dock" style={{
-      display: 'flex',
-      height: '100%',
-      position: 'relative',
-      zIndex: 10,
-      flexShrink: 0
-    }}>
+    <div
+      className="osdag-input-dock"
+      style={{
+        display: 'flex',
+        height: '100%',
+        position: 'relative',
+        zIndex: 10,
+        flexShrink: 0,
+      }}
+    >
       {isDockCollapsed ? (
-        /* ── InputDockIndicator (mirrors desktop InputDockIndicator) ── */
+        // ─── Collapsed Indicator (mirrors desktop InputDockIndicator) ─────────
         <div className="osdag-dock-indicator osdag-dock-indicator--input">
           <img
             src="/vectors/inputs_label_light.svg"
@@ -99,16 +119,17 @@ export const InputDock: React.FC = () => {
                 toggleDock();
               }}
               title="Show input panel"
+              aria-label="Expand input dock"
             >
               ❯
             </button>
           </div>
         </div>
       ) : (
+        // ─── Expanded Input Panel ─────────────────────────────────────────────
         <>
-          {/* ── Left Container (Input Panel) ── */}
           <aside
-            aria-label="Basic inputs"
+            aria-label="Bridge Input Parameters"
             style={{
               width: '340px',
               minWidth: '340px',
@@ -117,27 +138,31 @@ export const InputDock: React.FC = () => {
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden'
+              overflow: 'hidden',
             }}
           >
-            <div style={{
-              padding: '12px 15px 10px 15px',
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-              minWidth: '310px',
-              boxSizing: 'border-box'
-            }}>
-              {/* ── 1. Top Bar (_build_top_bar) ── */}
-              <div style={{
+            <div
+              style={{
+                padding: '12px 15px 10px 15px',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '12px',
-                flexWrap: 'nowrap',   /* mirrors desktop: no wrapping in top bar */
-                minWidth: 0,
-              }}>
-                {/* Basic Inputs Button (active tab, mirrors basic_btn with Expanding SizePolicy) */}
+                flexDirection: 'column',
+                height: '100%',
+                minWidth: '310px',
+                boxSizing: 'border-box',
+              }}
+            >
+              {/* ── 1. Top Bar (_build_top_bar) ──────────────────────────────── */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '12px',
+                  flexWrap: 'nowrap',
+                  minWidth: 0,
+                }}
+              >
+                {/* Basic Inputs Tab (active) */}
                 <button
                   type="button"
                   aria-current="page"
@@ -161,11 +186,10 @@ export const InputDock: React.FC = () => {
                   Basic Inputs
                 </button>
 
-                {/* Additional Inputs Button (mirrors additional_inputs_btn with Expanding SizePolicy) */}
+                {/* Additional Inputs Tab (display-only in basic UI PR) */}
                 <button
                   type="button"
-                  onClick={() => setAdditionalInputsOpen(true)}
-                  aria-label="Open additional inputs"
+                  aria-label="Additional inputs (disabled in preview mode)"
                   className="osdag-btn-standard"
                   style={{
                     flex: '1 1 0',
@@ -175,16 +199,20 @@ export const InputDock: React.FC = () => {
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
+                    cursor: 'default',
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
                   }}
                 >
                   Additional Inputs
                 </button>
 
-                {/* Lock / Unlock Button (Fixed SizePolicy, mirrors lock_btn) */}
+                {/* Lock / Unlock Toggle Button */}
                 <button
                   type="button"
                   onClick={toggleLock}
-                  title={isLocked ? "Locked (Click to Unlock)" : "Unlocked (Click to Lock)"}
+                  title={isLocked ? 'Locked (Click to Unlock)' : 'Unlocked (Click to Lock)'}
                   aria-pressed={isLocked}
                   aria-label={isLocked ? 'Unlock inputs' : 'Lock inputs'}
                   style={{
@@ -204,7 +232,7 @@ export const InputDock: React.FC = () => {
                   }}
                 >
                   <img
-                    src={isLocked ? "/vectors/lock_close.svg" : "/vectors/lock_open.svg"}
+                    src={isLocked ? '/vectors/lock_close.svg' : '/vectors/lock_open.svg'}
                     alt=""
                     width={16}
                     height={16}
@@ -212,11 +240,11 @@ export const InputDock: React.FC = () => {
                 </button>
               </div>
 
-              {/* ── 2. Scroll Area (_build_scroll_area) ── */}
+              {/* ── 2. Scroll Area (_build_scroll_area) ────────────────────────── */}
               <div
                 onClick={handleScrollAreaClick}
-                role="form"
-                aria-label="Schema-driven bridge inputs"
+                role="region"
+                aria-label="Bridge input parameters form"
                 style={{
                   flex: 1,
                   overflowY: 'auto',
@@ -224,57 +252,72 @@ export const InputDock: React.FC = () => {
                   borderBottom: '1px solid var(--border-color)',
                   padding: '6px 5px 10px 2px',
                   position: 'relative',
-                  opacity: isLocked ? 0.75 : 1
+                  opacity: isLocked ? 0.75 : 1,
                 }}
               >
                 {/* Floating Lock Tooltip */}
                 {showLockTooltip && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--accent-osdag)',
-                    borderRadius: '0px',
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: 'var(--text-main)',
-                    boxShadow: 'var(--shadow-md)',
-                    zIndex: 20
-                  }}>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--accent-osdag)',
+                      borderRadius: '0px',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: 'var(--text-main)',
+                      boxShadow: 'var(--shadow-md)',
+                      zIndex: 20,
+                    }}
+                  >
                     🔒 Unlock to Edit
                   </div>
                 )}
 
+                {/* Schema Loading State */}
                 {schemaLoading && (
-                  <div role="status" style={{ color: 'var(--text-sub)', fontSize: '12px', padding: '12px 0', textAlign: 'center' }}>
-                    Loading schema definitions...
+                  <div className="osdag-dock-status osdag-dock-status--loading" role="status">
+                    <RefreshCw size={18} className="osdag-spin" aria-hidden="true" />
+                    <span style={{ fontSize: '12px', color: 'var(--text-sub)' }}>
+                      Loading schema definitions...
+                    </span>
                   </div>
                 )}
 
+                {/* Backend Schema Unavailable State (Unloaded) */}
                 {schemaError && (
-                  <div role="alert" style={{
-                    margin: '12px 4px',
-                    padding: '10px',
-                    border: '1px solid var(--danger)',
-                    borderRadius: '4px',
-                    color: 'var(--danger)',
-                    fontSize: '12px',
-                  }}>
-                    <p>Unable to load bridge inputs: {schemaError}</p>
+                  <div role="alert" className="osdag-dock-status osdag-dock-status--error">
+                    <div className="osdag-dock-status__header">
+                      <AlertCircle size={16} aria-hidden="true" />
+                      <span>Backend Unavailable</span>
+                    </div>
+                    <p className="osdag-dock-status__message">
+                      Could not load the bridge input schema. The input dock remains unloaded until the backend service is reachable.
+                    </p>
                     <button
                       type="button"
                       onClick={() => void fetchSchema()}
                       className="osdag-btn-standard"
-                      style={{ marginTop: '8px' }}
+                      style={{ alignSelf: 'flex-start', marginTop: '4px', fontSize: '11px' }}
                     >
-                      Retry
+                      Retry Connection
                     </button>
                   </div>
                 )}
 
-                {/* Container & Group loop (mirrors desktop _make_container and _build_field_loop) */}
+                {/* Empty State when no error and no schema */}
+                {!schemaLoading && !schemaError && schema.length === 0 && (
+                  <div className="osdag-dock-status" role="status">
+                    <p className="osdag-dock-status__message">
+                      No bridge input schema is currently loaded.
+                    </p>
+                  </div>
+                )}
+
+                {/* Container & Group Field Loop */}
                 {Object.entries(containers).map(([containerKey, containerGroups]) => {
                   const isMain = containerKey === 'main';
                   const isCollapsed = Boolean(collapsedContainers[containerKey]);
@@ -324,32 +367,36 @@ export const InputDock: React.FC = () => {
                 })}
               </div>
 
-              {/* ── 3. Bottom Action Buttons (_build_bottom_buttons) ── */}
-              <div style={{
-                display: 'flex',
-                gap: '10px',
-                marginTop: '12px',
-                paddingTop: '2px'
-              }}>
-                {/* Save Input Button (DockCustomButton) */}
+              {/* ── 3. Bottom Action Buttons (_build_bottom_buttons) ──────────── */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '10px',
+                  marginTop: '12px',
+                  paddingTop: '2px',
+                }}
+              >
+                {/* Save Input Button */}
                 <button
                   type="button"
-                  disabled={isLocked}
+                  disabled={isLocked || schema.length === 0}
                   onClick={saveInputs}
                   className="dock-custom-button"
                   style={{ flex: 1 }}
+                  title={schema.length === 0 ? 'Inputs not loaded' : 'Save Inputs'}
                 >
                   <img src="/vectors/save.svg" alt="" width={18} height={18} />
                   <span>Save Input</span>
                 </button>
 
-                {/* Design Button (DockCustomButton) */}
+                {/* Design Button */}
                 <button
                   type="button"
-                  disabled={isLocked}
+                  disabled={isLocked || schema.length === 0}
                   onClick={runDesign}
                   className="dock-custom-button"
                   style={{ flex: 1 }}
+                  title={schema.length === 0 ? 'Inputs not loaded' : 'Run Bridge Design'}
                 >
                   <img src="/vectors/design.svg" alt="" width={18} height={18} />
                   <span>Design</span>
@@ -358,7 +405,7 @@ export const InputDock: React.FC = () => {
             </div>
           </aside>
 
-          {/* ── 4. Toggle Strip (_build_toggle_strip) on right edge ── */}
+          {/* ── 4. Toggle Strip (_build_toggle_strip) ─────────────────────────── */}
           <div
             className="osdag-toggle-strip"
             onClick={toggleDock}
@@ -373,6 +420,7 @@ export const InputDock: React.FC = () => {
                 toggleDock();
               }}
               title="Hide input panel"
+              aria-label="Collapse input dock"
             >
               ❮
             </button>

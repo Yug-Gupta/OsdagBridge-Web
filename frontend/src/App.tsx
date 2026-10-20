@@ -1,53 +1,76 @@
+/**
+ * App.tsx
+ *
+ * Root component for the OsdagBridge web workbench.
+ * Mirrors the top-level layout of osdagbridge.desktop.ui.template_page.
+ *
+ * Layout structure:
+ *   ┌─────────────────────────────────────────────────┐
+ *   │ Header (menu bar + viewport toggles)            │
+ *   ├────────────┬──────────────────────┬─────────────┤
+ *   │ InputDock  │   Log / Viewport     │ OutputDock  │
+ *   │            │   (app-center)       │             │
+ *   └────────────┴──────────────────────┴─────────────┘
+ *
+ * Modals:
+ *   ProjectLocationModal — project location picker (always mounted, hidden until triggered)
+ */
+
 import React, { useEffect } from 'react';
 import { useBridgeStore } from './store/useBridgeStore';
 import { Header } from './components/layout/Header';
 import { InputDock } from './components/docks/InputDock';
-import { ViewportContainer } from './components/viewports/ViewportContainer';
 import { OutputDock } from './components/docks/OutputDock';
 import { LogDock } from './components/docks/LogDock';
 import { ProjectLocationModal } from './components/dialogs/ProjectLocationModal';
-import { ClearResultsConfirmModal } from './components/dialogs/ClearResultsConfirmModal';
-import { MaterialPropertiesModal } from './components/dialogs/MaterialPropertiesModal';
-import { AdditionalInputsModal } from './components/dialogs/AdditionalInputsModal';
-import { WarningModal } from './components/dialogs/WarningModal';
-import { SteelDesignModal } from './components/dialogs/SteelDesignModal';
-import { TransverseDesignModal } from './components/dialogs/TransverseDesignModal';
-import { DeckDesignModal } from './components/dialogs/DeckDesignModal';
-import { GenerateResultsModal } from './components/dialogs/GenerateResultsModal';
-import { ReportOptionsModal } from './components/dialogs/ReportOptionsModal';
-import { LoadingModal } from './components/dialogs/LoadingModal';
 
 export default function App() {
   const darkMode = useBridgeStore((s) => s.darkMode);
 
+  // Sync the HTML root element's data-theme attribute with the store flag
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
     document.documentElement.style.colorScheme = darkMode ? 'dark' : 'light';
   }, [darkMode]);
 
   return (
-    <div className="app-root" style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw' }}>
+    <div
+      className="app-root"
+      style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw' }}
+    >
+      {/* Accessibility: skip-nav link */}
       <a href="#main-workbench" className="skip-link">Skip to workbench</a>
+
       <Header />
-      <div id="main-workbench" className="app-workbench" role="main" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+
+      {/* Three-column workbench: Input | Center (Log) | Output */}
+      <div
+        id="main-workbench"
+        className="app-workbench"
+        role="main"
+        style={{ display: 'flex', flex: 1, overflow: 'hidden' }}
+      >
         <InputDock />
-        <div className="app-center" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minWidth: 0, position: 'relative' }}>
-          <ViewportContainer />
+
+        <div
+          className="app-center"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            overflow: 'hidden',
+            minWidth: 0,
+            position: 'relative',
+          }}
+        >
           <LogDock />
         </div>
+
         <OutputDock />
       </div>
+
+      {/* Modals — always mounted, revealed by store flags */}
       <ProjectLocationModal />
-      <ClearResultsConfirmModal />
-      <MaterialPropertiesModal />
-      <AdditionalInputsModal />
-      <WarningModal />
-      <SteelDesignModal />
-      <TransverseDesignModal />
-      <DeckDesignModal />
-      <GenerateResultsModal />
-      <ReportOptionsModal />
-      <LoadingModal />
     </div>
   );
 }

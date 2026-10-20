@@ -1,21 +1,38 @@
 /**
  * LogDock.tsx
- * Web implementation of OsdagBridge Log Dock widget.
- * Mirrors osdagbridge.desktop.ui.docks.log_dock.LogDock
  *
- * Features:
- *   - Real-time logging of design & analysis events
- *   - Status title displaying progress: "Log Window", "Log Window  –  Analysing… X%", "Log Window  –  Complete (100%)"
- *   - Color-coded log levels (info, success, warning, error, stdout_print)
- *   - Smart auto-scrolling (preserves scroll position if user scrolls up)
- *   - Reset / Clear action restoring initial "[timestamp] Log initialized" state
- *   - Copy logs to clipboard
- *   - Minimizable / collapsible & closeable dock
+ * Log dock component for the OsdagBridge workbench.
+ * Adapts osdagbridge.desktop.ui.docks.log_dock.LogDock for React.
+ *
+ * Features (matching desktop behaviour):
+ *   - Title bar with dynamic title: "Log Window", "Log Window — Analysing… X%", "Log Window — Complete (100%)"
+ *   - Inline progress bar shown while analysis is running (0–99%)
+ *   - Color-coded messages by log level: error (red), warning (orange), success (green), info/stdout (grey)
+ *   - Smart auto-scroll: scrolls to bottom only if user was already at bottom (within 15px tolerance)
+ *   - Copy logs to clipboard (with fallback for older browsers)
+ *   - Reset / Clear action restoring initial "Log initialized" state
+ *   - Minimizable (collapse title bar only) and closeable
  */
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useBridgeStore } from '../../store/useBridgeStore';
 import { Terminal, Trash2, Copy, Check, ChevronDown, ChevronUp, X } from 'lucide-react';
+
+// ─── Log Level → Color Map ─────────────────────────────────────────────────────
+
+/** Returns the display color for a given log level, matching desktop log_dock.py colors. */
+function getLevelColor(level: string): string {
+  switch (level) {
+    case 'error':        return '#FF0000'; // Red
+    case 'warning':      return '#FFA500'; // Orange
+    case 'success':      return '#008000'; // Green
+    case 'stdout_print':
+    case 'info':
+    default:             return 'var(--log-text-color)'; // Grey / theme default
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export const LogDock: React.FC = () => {
   const {
@@ -26,62 +43,44 @@ export const LogDock: React.FC = () => {
     logWindowTitle,
     logProgress,
     logs,
-    resetLogs
+    resetLogs,
+    activeViewportTab,
   } = useBridgeStore();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
 
-  // Smart auto-scrolling matching desktop (scrollbar within 15px of maximum)
+  // Auto-scroll when new logs arrive; honours the "within 15px of bottom" rule (matches desktop)
   useEffect(() => {
     if (!scrollRef.current || !isAutoScroll || isLogDockCollapsed) return;
-    const el = scrollRef.current;
-    el.scrollTop = el.scrollHeight;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [logs, isAutoScroll, isLogDockCollapsed]);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    const wasAtBottom = scrollHeight - scrollTop - clientHeight <= 15;
-    setIsAutoScroll(wasAtBottom);
+    setIsAutoScroll(scrollHeight - scrollTop - clientHeight <= 15);
   };
 
   const handleCopyLogs = async () => {
-    const text = logs.map(l => l.message).join('\n');
+    const text = logs.map((l) => l.message).join('\n');
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
     } catch {
-      // Fallback
+      // Fallback for browsers without Clipboard API
       const ta = document.createElement('textarea');
       ta.value = text;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   if (!isLogDockOpen) return null;
-
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'error':
-        return '#FF0000'; // Red for errors (mirrors log_dock.py)
-      case 'warning':
-        return '#FFA500'; // Orange for warnings (mirrors log_dock.py)
-      case 'success':
-        return '#008000'; // Green for success (mirrors log_dock.py)
-      case 'stdout_print':
-      case 'info':
-      default:
-        return 'var(--log-text-color)';
-    }
-  };
 
   return (
     <div
@@ -92,15 +91,16 @@ export const LogDock: React.FC = () => {
         borderTop: '1px solid var(--border-color)',
         display: 'flex',
         flexDirection: 'column',
-        height: isLogDockCollapsed ? '28px' : '140px',
+        height: isLogDockCollapsed ? '28px' : (activeViewportTab === 'plots' ? '140px' : '100%'),
+        flex: isLogDockCollapsed ? 'none' : 1,
         transition: 'height 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         zIndex: 5,
         position: 'relative',
         boxSizing: 'border-box',
-        overflow: 'hidden'
+        overflow: 'hidden',
       }}
     >
-      {/* ── Top Strip / Title Bar (_init_ui top strip, mirrors QWidget#logs_dock QLabel) ── */}
+      {/* ── Title Bar (mirrors QLabel log_window_title in log_dock.py init_ui) ── */}
       <div
         style={{
           height: '26px',
@@ -111,20 +111,23 @@ export const LogDock: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 8px',
-          userSelect: 'none'
+          userSelect: 'none',
         }}
       >
+        {/* Left: Title + Progress Bar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span
             style={{
               fontSize: '12px',
               fontWeight: 'bold',
               color: 'var(--text-main)',
-              fontFamily: 'inherit'
+              fontFamily: 'inherit',
             }}
           >
             {logWindowTitle}
           </span>
+
+          {/* Inline progress bar shown while analysis is running (0–99%) */}
           {logProgress !== null && logProgress < 100 && (
             <div
               style={{
@@ -132,7 +135,7 @@ export const LogDock: React.FC = () => {
                 height: '4px',
                 background: 'rgba(144, 175, 19, 0.2)',
                 borderRadius: '2px',
-                overflow: 'hidden'
+                overflow: 'hidden',
               }}
             >
               <div
@@ -140,20 +143,20 @@ export const LogDock: React.FC = () => {
                   width: `${logProgress}%`,
                   height: '100%',
                   background: 'var(--accent-osdag)',
-                  transition: 'width 0.2s ease'
+                  transition: 'width 0.2s ease',
                 }}
               />
             </div>
           )}
         </div>
 
-        {/* Action Controls */}
+        {/* Right: Action Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {/* Copy Logs */}
           <button
             type="button"
             onClick={handleCopyLogs}
-            title="Copy logs"
+            title="Copy logs to clipboard"
             style={{
               background: 'none',
               border: 'none',
@@ -162,17 +165,17 @@ export const LogDock: React.FC = () => {
               padding: '4px',
               display: 'flex',
               alignItems: 'center',
-              borderRadius: '3px'
+              borderRadius: '3px',
             }}
           >
             {copied ? <Check size={13} /> : <Copy size={13} />}
           </button>
 
-          {/* Reset / Clear Logs */}
+          {/* Reset / Clear Logs (mirrors log_dock.py reset()) */}
           <button
             type="button"
             onClick={resetLogs}
-            title="Clear Log (Reset)"
+            title="Clear log and reset to initial state"
             style={{
               background: 'none',
               border: 'none',
@@ -181,7 +184,7 @@ export const LogDock: React.FC = () => {
               padding: '4px',
               display: 'flex',
               alignItems: 'center',
-              borderRadius: '3px'
+              borderRadius: '3px',
             }}
           >
             <Trash2 size={13} />
@@ -191,7 +194,7 @@ export const LogDock: React.FC = () => {
           <button
             type="button"
             onClick={toggleLogDockCollapse}
-            title={isLogDockCollapsed ? "Expand Log Window" : "Minimize Log Window"}
+            title={isLogDockCollapsed ? 'Expand Log Window' : 'Minimize Log Window'}
             style={{
               background: 'none',
               border: 'none',
@@ -200,7 +203,7 @@ export const LogDock: React.FC = () => {
               padding: '4px',
               display: 'flex',
               alignItems: 'center',
-              borderRadius: '3px'
+              borderRadius: '3px',
             }}
           >
             {isLogDockCollapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -219,7 +222,7 @@ export const LogDock: React.FC = () => {
               padding: '4px',
               display: 'flex',
               alignItems: 'center',
-              borderRadius: '3px'
+              borderRadius: '3px',
             }}
           >
             <X size={14} />
@@ -227,12 +230,15 @@ export const LogDock: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Log Display Area (textEdit) ── */}
+      {/* ── Log Display Area (mirrors QTextEdit#textEdit in log_dock.py) ───────── */}
       {!isLogDockCollapsed && (
         <div
           ref={scrollRef}
           onScroll={handleScroll}
           id="textEdit"
+          role="log"
+          aria-live="polite"
+          aria-label="Design log messages"
           style={{
             flex: 1,
             overflowY: 'auto',
@@ -245,7 +251,7 @@ export const LogDock: React.FC = () => {
             border: '1px solid var(--log-border)',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
-            userSelect: 'text'
+            userSelect: 'text',
           }}
         >
           {logs.map((entry) => (
@@ -253,7 +259,7 @@ export const LogDock: React.FC = () => {
               key={entry.id}
               style={{
                 color: getLevelColor(entry.level),
-                marginBottom: '2px'
+                marginBottom: '2px',
               }}
             >
               {entry.message}
