@@ -1,38 +1,80 @@
 /**
- * Canonical OsdagBridge input keys and accessors.
+ * bridgeInputs.ts
  *
- * These string keys are the web mirror of the desktop KEY_* constants in
- * osdagbridge.core.utils.common (e.g. KEY_SPAN = "geometry.span"). Keeping them
- * in one place lets every component read inputs without hardcoding strings, so
- * the same values flow to the shared core engine through the backend.
+ * Canonical OsdagBridge input keys, widget type constants, and accessors.
+ *
+ * These constants mirror the Desktop KEY_* and TYPE_* vocabulary where the
+ * web schema uses the same identifiers (for example, KEY_SPAN).
+ *
+ * Keeping them together prevents field components from duplicating schema keys.
  */
 
+// ── Desktop Type Constants (osdagbridge.core.utils.common) ───────────────────
+export const TYPE_TITLE        = 'title';
+export const TYPE_BUTTON       = 'button';
+export const TYPE_COMBOBOX     = 'combobox';
+export const TYPE_COMBO_BOX    = 'combo_box';
+export const TYPE_TEXTBOX      = 'textbox';
+export const TYPE_LINE_EDIT    = 'line_edit';
+export const TYPE_NOTE         = 'note';
+export const TYPE_CHECKBOX     = 'checkbox';
+export const TYPE_PERCENT_BAR  = 'percent_bar';
+export const TYPE_RADIO_GRID   = 'radio_grid';
+
+// ── Desktop Key Constants (osdagbridge.core.utils.common) ────────────────────
+export const KEY_SPAN                    = 'geometry.span';
+export const KEY_CARRIAGEWAY_WIDTH       = 'geometry.carriageway_width';
+export const KEY_SKEW_ANGLE              = 'geometry.skew_angle';
+export const KEY_STRUCTURE_TYPE          = 'structure.type';
+export const KEY_INCLUDE_MEDIAN          = 'geometry.include_median';
+export const KEY_FOOTPATH                = 'geometry.footpath';
+export const KEY_DESIGN_MODE             = 'geometry.design_mode';
+export const KEY_PROJECT_LOCATION        = 'project.location';
+
+export const KEY_MATERIAL_GIRDER         = 'material.girder';
+export const KEY_MATERIAL_CROSS_BRACING  = 'material.cross_bracing';
+export const KEY_MATERIAL_END_DIAPHRAGM  = 'material.end_diaphragm';
+export const KEY_MATERIAL_DECK           = 'material.deck';
+
+// Additional Inputs — Typical Section Details
+export const KEY_TS_NO_OF_GIRDERS        = 'typical_section.no_of_girders';
+export const KEY_GIRDER_SPACING          = 'typical_section.girder_spacing';
+export const KEY_DECK_OVERHANG           = 'typical_section.deck_overhang';
+export const KEY_OVERALL_BRIDGE_WIDTH    = 'typical_section.overall_bridge_width';
+
+// Additional Inputs — Loading (project location populates these)
+export const KEY_BASIC_WIND_SPEED        = 'loading.wind_load.basic_wind_speed';
+export const KEY_SEISMIC_ZONE            = 'loading.seismic_load.seismic_zone';
+export const KEY_MAX_TEMPERATURE         = 'loading.temperature_load.highest_max_temp';
+export const KEY_MIN_TEMPERATURE         = 'loading.temperature_load.lowest_min_temp';
+
+// ── Canonical Input Keys Map ──────────────────────────────────────────────────
 export const INPUT_KEYS = {
   module: 'module.plate_girder',
-  structureType: 'structure.type',
-  span: 'geometry.span',
-  carriagewayWidth: 'geometry.carriageway_width',
-  includeMedian: 'geometry.include_median',
-  footpath: 'geometry.footpath',
-  skewAngle: 'geometry.skew_angle',
-  designMode: 'geometry.design_mode',
-  projectLocation: 'project.location',
-  girder: 'material.girder',
-  crossBracing: 'material.cross_bracing',
-  endDiaphragm: 'material.end_diaphragm',
-  deck: 'material.deck',
+  structureType: KEY_STRUCTURE_TYPE,
+  span: KEY_SPAN,
+  carriagewayWidth: KEY_CARRIAGEWAY_WIDTH,
+  includeMedian: KEY_INCLUDE_MEDIAN,
+  footpath: KEY_FOOTPATH,
+  skewAngle: KEY_SKEW_ANGLE,
+  designMode: KEY_DESIGN_MODE,
+  projectLocation: KEY_PROJECT_LOCATION,
+  girder: KEY_MATERIAL_GIRDER,
+  crossBracing: KEY_MATERIAL_CROSS_BRACING,
+  endDiaphragm: KEY_MATERIAL_END_DIAPHRAGM,
+  deck: KEY_MATERIAL_DECK,
 
   // Additional Inputs — Typical Section Details
-  noOfGirders: 'typical_section.no_of_girders',
-  girderSpacing: 'typical_section.girder_spacing',
-  deckOverhang: 'typical_section.deck_overhang',
-  overallWidth: 'typical_section.overall_bridge_width',
+  noOfGirders: KEY_TS_NO_OF_GIRDERS,
+  girderSpacing: KEY_GIRDER_SPACING,
+  deckOverhang: KEY_DECK_OVERHANG,
+  overallWidth: KEY_OVERALL_BRIDGE_WIDTH,
 
   // Additional Inputs — Loading (project location populates these)
-  windSpeed: 'loading.wind_load.basic_wind_speed',
-  seismicZone: 'loading.seismic_load.seismic_zone',
-  maxTemp: 'loading.temperature_load.highest_max_temp',
-  minTemp: 'loading.temperature_load.lowest_min_temp',
+  windSpeed: KEY_BASIC_WIND_SPEED,
+  seismicZone: KEY_SEISMIC_ZONE,
+  maxTemp: KEY_MAX_TEMPERATURE,
+  minTemp: KEY_MIN_TEMPERATURE,
 } as const;
 
 type Inputs = Record<string, any>;
@@ -98,21 +140,17 @@ export function getNoOfGirders(inputs: Inputs, additionalInputs?: AdditionalInpu
 export function getGirderSpacing(inputs: Inputs, additionalInputs?: AdditionalInputs): number {
   const fromAdditional = Number(additionalInputs?.[INPUT_KEYS.girderSpacing]);
   if (Number.isFinite(fromAdditional) && fromAdditional > 0) return fromAdditional;
-  const v = Number(inputs[INPUT_KEYS.girderSpacing]);
-  return Number.isFinite(v) && v > 0 ? v : GIRDER_SPACING_DEFAULT_M;
+  return GIRDER_SPACING_DEFAULT_M;
 }
 
-/** Returns deck overhang in meters; uses CAD fallback default. */
+/** Returns deck overhang in meters; prefers additionalInputs, then CAD fallback default. */
 export function getDeckOverhang(inputs: Inputs, additionalInputs?: AdditionalInputs): number {
   const fromAdditional = Number(additionalInputs?.[INPUT_KEYS.deckOverhang]);
   if (Number.isFinite(fromAdditional) && fromAdditional > 0) return fromAdditional;
   return DECK_OVERHANG_DEFAULT_M;
 }
 
-export function getGirderMaterial(inputs: Inputs): string {
-  return String(inputs[INPUT_KEYS.girder] ?? '');
-}
-
-export function getDeckMaterial(inputs: Inputs): string {
-  return String(inputs[INPUT_KEYS.deck] ?? '');
+/** Returns deck thickness in meters. */
+export function getDeckThickness(): number {
+  return CAD_DEFAULTS.DECK_THICKNESS_MM / 1000;
 }

@@ -4,9 +4,7 @@
  * Shared utility functions and style helpers for the dock components.
  * Adapts osdagbridge.desktop.ui.docks.dock_utils for the web layer.
  *
- * apply_field_style from the desktop dock_utils.py is represented here as
- * getFieldStyle() and getComboboxStyle(), returning React.CSSProperties objects
- * that dock form fields can spread onto their style prop.
+ * Each helper returns the web equivalent of the shared Desktop field style.
  */
 
 import React from 'react';
@@ -44,9 +42,14 @@ export const getFieldStyle = (options: FieldStyleOptions = {}): React.CSSPropert
 };
 
 /**
- * Returns common combobox (select) styles matching desktop dock_utils.
- * Delegates to getFieldStyle since the style set is identical.
+ * Returns common combobox styles. The browser supplies the dropdown arrow,
+ * while the remaining shared field styling matches the Desktop helper.
  */
 export const getComboboxStyle = (options: FieldStyleOptions = {}): React.CSSProperties => {
   return getFieldStyle(options);
 };
+
+/**
+ * Desktop-compatible name for callers that mirror dock_utils.py.
+ */
+export const apply_field_style = getFieldStyle;

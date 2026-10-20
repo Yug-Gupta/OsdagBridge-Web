@@ -1,34 +1,35 @@
 /**
  * SchemaField.tsx
  *
- * Renders a single UI field driven by a UIFieldSchema entry from the backend.
- * Adapts osdagbridge.desktop.ui.docks.dock_utils apply_field_style and the
- * field-row building logic from input_dock.py to a registry-based React approach.
+ * Input field renderer for Highway Bridge Design GUI.
+ * Mirrors the field-row building logic of osdagbridge.desktop.ui.docks.input_dock.
  *
- * Field type registry:
- *   - All renderers are registered via registerFieldType().
- *   - SchemaField resolves the renderer by ui_type at render time.
- *   - New field types can be injected externally without modifying this file.
- *
- * Supported ui_type values:
- *   button, combobox, select, dropdown, checkbox, note, number, text, textbox
+ * Design principles (adapted from desktop input_dock.py):
+ *   - Label comes from field.label (tuple[1] in desktop).
+ *   - Defaults live in field.default.
+ *   - TYPE_BUTTON and TYPE_NOTE are first-class field rows.
+ *   - Direct if-else branching for field types matching desktop field creation:
+ *       if type in COMBOBOX: render combobox
+ *       elif type in TEXTBOX / LINE_EDIT: render textbox
+ *       elif type in BUTTON: render button
+ *       elif type in NOTE: render note
+ *       elif type in CHECKBOX: render checkbox
  */
 
 import React, { useState, useEffect } from 'react';
 import { UIFieldSchema } from '../../types/schema';
 import { useBridgeStore } from '../../store/useBridgeStore';
 import { AlertCircle } from 'lucide-react';
-
-// ── Field Renderer Registry ────────────────────────────────────────────────────
-
-export type FieldRenderer = React.FC<{ field: UIFieldSchema }>;
-
-const fieldRenderers: Record<string, FieldRenderer> = {};
-
-/** Register an additional schema `ui_type` renderer without rewriting the form. */
-export function registerFieldType(uiType: string, renderer: FieldRenderer) {
-  fieldRenderers[uiType] = renderer;
-}
+import {
+  TYPE_BUTTON,
+  TYPE_COMBOBOX,
+  TYPE_COMBO_BOX,
+  TYPE_TEXTBOX,
+  TYPE_LINE_EDIT,
+  TYPE_NOTE,
+  TYPE_CHECKBOX,
+  KEY_INCLUDE_MEDIAN,
+} from '../../utils/bridgeInputs';
 
 // ── Shared Sub-Components ──────────────────────────────────────────────────────
 
@@ -81,18 +82,16 @@ function FieldError({ id, error }: { id: string; error?: string }) {
   );
 }
 
-// ── Field Renderers ────────────────────────────────────────────────────────────
+// ── Field Renderers (mirrors desktop widget factories in input_dock.py) ────────
 
 /**
- * ButtonField — mirrors TYPE_BUTTON rows in input_dock.py.
- * For project.location, opens the ProjectLocation dialog.
- * Other button fields are visual-only in this basic UI.
+ * ButtonField — mirrors the metadata-driven TYPE_BUTTON row in input_dock.py.
+ * The schema action selects the supported web callback; the field key does not.
  */
-const ButtonField: FieldRenderer = ({ field }) => {
+const ButtonField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
   const { inputs, location, isLocked, setLocationModalOpen } = useBridgeStore();
 
-  const isLocationField =
-    field.key === 'project.location' ||
+  const opensLocationDialog =
     field.action === 'show_project_location_dialog' ||
     field.action === 'open_project_location_modal';
 
@@ -100,10 +99,10 @@ const ButtonField: FieldRenderer = ({ field }) => {
     ? `${location.station}, ${location.state}`
     : (inputs['project.location'] || 'New Delhi, Delhi');
   const hasLocation = Boolean(locationText);
-  const buttonText = isLocationField
+  const buttonText = opensLocationDialog
     ? (location ? `${location.station}, ${location.state}` : (inputs['project.location'] || field.button_label || 'Delhi, India'))
     : (field.button_label || field.label);
-  const showPin = (field.post_row?.kind === 'info_row' || isLocationField) && hasLocation;
+  const showPin = field.post_row?.kind === 'info_row' && hasLocation;
 
   return (
     <div style={{ marginBottom: '8px' }}>
@@ -112,9 +111,8 @@ const ButtonField: FieldRenderer = ({ field }) => {
         <button
           type="button"
           disabled={isLocked}
-          aria-label={buttonText}
           onClick={() => {
-            if (isLocationField) {
+            if (opensLocationDialog) {
               setLocationModalOpen(true);
             }
           }}
@@ -129,26 +127,19 @@ const ButtonField: FieldRenderer = ({ field }) => {
         </button>
       </div>
 
-      {/* Location pin info row (mirrors post_row: info_row in input_values) */}
       {showPin && (
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
             gap: '6px',
-            marginTop: '6px',
+            marginTop: '4px',
+            paddingLeft: '118px',
             fontSize: '11px',
-            color: 'var(--text-main)',
+            color: 'var(--text-sub)',
           }}
         >
-          <img
-            src="/vectors/location_pin.svg"
-            alt=""
-            width={16}
-            height={16}
-            style={{ objectFit: 'contain' }}
-          />
+          <span aria-hidden="true">📍</span>
           <span>{locationText}</span>
         </div>
       )}
@@ -157,24 +148,14 @@ const ButtonField: FieldRenderer = ({ field }) => {
 };
 
 /**
- * SelectField (combobox) — mirrors TYPE_COMBOBOX rows in input_dock.py.
- * Material fields include a visual-only properties info button.
+ * SelectField — mirrors the desktop combobox factory.
+ * Disabled schema options remain visible but cannot be selected.
  */
-const SelectField: FieldRenderer = ({ field }) => {
+const SelectField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
   const { inputs, updateField, isLocked } = useBridgeStore();
-
   const value = inputs[field.key] ?? field.default ?? '';
+  const options = field.options || [];
   const fieldId = `field-${field.key}`;
-
-  const isMaterialField = Boolean(
-    field.is_material_field || field.group === 'Material Inputs' || field.key.startsWith('material.')
-  );
-
-  const options = field.options ?? [];
-
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    updateField(field.key, e.target.value);
-  };
 
   return (
     <div style={{ marginBottom: '8px' }}>
@@ -186,14 +167,22 @@ const SelectField: FieldRenderer = ({ field }) => {
             value={value}
             disabled={isLocked}
             aria-required={field.required || undefined}
-            onChange={handleChange}
+            onChange={(e) => {
+              updateField(field.key, e.target.value);
+            }}
             className="osdag-select-field"
             style={{
               flex: 1,
               width: '100%',
+              cursor: isLocked ? 'not-allowed' : 'pointer',
               opacity: isLocked ? 0.65 : 1,
             }}
           >
+            {field.placeholder && (
+              <option value="" disabled>
+                {field.placeholder}
+              </option>
+            )}
             {options.map((opt) => (
               <option
                 key={opt}
@@ -204,34 +193,23 @@ const SelectField: FieldRenderer = ({ field }) => {
               </option>
             ))}
           </select>
-
-          {/* Material Info button — visual only in basic UI */}
-          {isMaterialField && (
+          {field.is_material_field && (
             <button
               type="button"
               title="View material properties"
               aria-label={`View properties for ${field.label}`}
               onClick={() => {}}
               style={{
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
                 width: '20px',
                 height: '20px',
+                padding: 0,
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
                 flexShrink: 0,
               }}
             >
-              <img
-                src="/vectors/msg_about.svg"
-                alt="i"
-                width={18}
-                height={18}
-                style={{ objectFit: 'contain' }}
-              />
+              <img src="/vectors/msg_about.svg" alt="" width={18} height={18} />
             </button>
           )}
         </div>
@@ -243,7 +221,7 @@ const SelectField: FieldRenderer = ({ field }) => {
 /**
  * CheckboxField — mirrors TYPE_CHECKBOX rows in input_dock.py.
  */
-const CheckboxField: FieldRenderer = ({ field }) => {
+const CheckboxField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
   const { inputs, updateField, isLocked } = useBridgeStore();
   const value = inputs[field.key] ?? field.default ?? false;
   const fieldId = `field-${field.key}`;
@@ -275,7 +253,7 @@ const CheckboxField: FieldRenderer = ({ field }) => {
  * NoteField — mirrors TYPE_NOTE rows in input_dock.py.
  * Renders an informational text block with a left accent border.
  */
-const NoteField: FieldRenderer = ({ field }) => (
+const NoteField: React.FC<{ field: UIFieldSchema }> = ({ field }) => (
   <p
     role="note"
     style={{
@@ -295,9 +273,9 @@ const NoteField: FieldRenderer = ({ field }) => (
 
 /**
  * TextOrNumberField — mirrors TYPE_TEXTBOX rows in input_dock.py.
- * Applies numeric validation cues and dynamic placeholder resolution.
+ * Keeps edits local until focus leaves the field, matching desktop editingFinished.
  */
-const TextOrNumberField: FieldRenderer = ({ field }) => {
+const TextOrNumberField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
   const { inputs, updateField, isLocked } = useBridgeStore();
 
   const value = inputs[field.key] ?? field.default ?? '';
@@ -317,46 +295,53 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
     setLocalVal(value !== null && value !== undefined ? String(value) : '');
   }, [value]);
 
-  // Dynamic placeholder resolution (matches desktop _carriageway_placeholder_text)
-  let placeholderText = field.placeholder || '';
-  if (
-    field.placeholder_dynamic === '_carriageway_placeholder_text' ||
-    field.key === 'geometry.carriageway_width'
-  ) {
-    const isMedian = inputs['geometry.include_median'] === 'Yes';
-    placeholderText = isMedian ? '7.5–23.6 m' : '4.25–23.6 m';
-  } else if (!placeholderText && field.key === 'geometry.skew_angle') {
-    placeholderText = '-15.0–15.0°';
-  } else if (!placeholderText && field.key === 'geometry.span') {
-    placeholderText = '10.0–45.0 m';
-  }
+  // Desktop records the placeholder method in schema metadata; keep the web
+  // equivalent metadata-driven instead of branching on a field key.
+  const resolvedPlaceholder = (() => {
+    if (field.placeholder_dynamic === '_carriageway_placeholder_text') {
+      const hasMedian = inputs[KEY_INCLUDE_MEDIAN] === 'Yes';
+      return hasMedian ? '≥ 8.5' : '4.25 – 24';
+    }
+    return field.placeholder;
+  })();
 
-  const handleTyping = (newVal: string) => {
-    setLocalVal(newVal);
-    const num = Number(newVal);
-    updateField(field.key, isNumber && !isNaN(num) && newVal.trim() !== '' ? num : newVal);
+  const handleTyping = (raw: string) => {
+    setLocalVal(raw);
   };
 
   const handleBlur = () => {
-    const num = Number(localVal);
-    const finalVal = isNumber && !isNaN(num) && localVal.trim() !== '' ? num : localVal.trim();
-    updateField(field.key, finalVal);
+    const trimmed = localVal.trim();
+
+    if (!isNumber) {
+      updateField(field.key, trimmed);
+      return;
+    }
+
+    if (trimmed === '') {
+      updateField(field.key, null);
+      return;
+    }
+    const n = Number(trimmed);
+    if (!Number.isNaN(n)) {
+      let clamped = n;
+      if (field.min != null && clamped < field.min) clamped = field.min;
+      if (field.max != null && clamped > field.max) clamped = field.max;
+      setLocalVal(String(clamped));
+      updateField(field.key, clamped);
+    }
   };
 
   return (
     <div style={{ marginBottom: '8px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <FieldLabel field={field} htmlFor={fieldId} />
-        <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+        <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
           <input
             id={fieldId}
-            type={isNumber ? 'number' : 'text'}
-            inputMode={isNumber ? 'decimal' : undefined}
-            step={field.step ?? (isNumber ? 'any' : undefined)}
-            min={isNumber && field.min != null ? field.min : undefined}
-            max={isNumber && field.max != null ? field.max : undefined}
+            type="text"
+            inputMode={isNumber ? 'decimal' : 'text'}
             value={localVal}
-            placeholder={placeholderText}
+            placeholder={resolvedPlaceholder}
             disabled={isLocked}
             aria-required={field.required || undefined}
             onChange={(e) => handleTyping(e.target.value)}
@@ -393,28 +378,49 @@ const TextOrNumberField: FieldRenderer = ({ field }) => {
   );
 };
 
-// ── Field Type Registry ────────────────────────────────────────────────────────
-
-registerFieldType('button', ButtonField);
-registerFieldType('select', SelectField);
-registerFieldType('dropdown', SelectField);
-registerFieldType('combobox', SelectField);
-registerFieldType('checkbox', CheckboxField);
-registerFieldType('note', NoteField);
-registerFieldType('number', TextOrNumberField);
-registerFieldType('text', TextOrNumberField);
-registerFieldType('textbox', TextOrNumberField);
-
-const UnsupportedField: FieldRenderer = ({ field }) => (
-  <p role="alert" style={{ marginBottom: '8px', color: 'var(--danger)', fontSize: '11px' }}>
-    Unsupported input type &quot;{field.ui_type}&quot; for {field.label}.
-  </p>
-);
-
 // ── Public Component ───────────────────────────────────────────────────────────
 
+/**
+ * SchemaField
+ *
+ * Direct if-else branching for field types mirroring desktop input_dock.py:
+ *   if field_type == TYPE_BUTTON: ...
+ *   elif field_type == TYPE_COMBO_BOX: ...
+ *   elif field_type == TYPE_TEXTBOX: ...
+ *   elif field_type == TYPE_CHECKBOX: ...
+ *   elif field_type == TYPE_NOTE: ...
+ */
 export const SchemaField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
-  const normalizedType = (field.ui_type || '').toLowerCase();
-  const Renderer = fieldRenderers[normalizedType] ?? fieldRenderers[field.ui_type] ?? UnsupportedField;
-  return <Renderer field={field} />;
+  const type = (field.ui_type || '').toLowerCase();
+
+  // Desktop field creation branching (mirrors input_dock.py _build_field_loop)
+  if (type === TYPE_BUTTON) {
+    return <ButtonField field={field} />;
+  } else if (
+    type === TYPE_COMBOBOX ||
+    type === TYPE_COMBO_BOX ||
+    type === 'select' ||
+    type === 'dropdown'
+  ) {
+    return <SelectField field={field} />;
+  } else if (
+    type === TYPE_TEXTBOX ||
+    type === TYPE_LINE_EDIT ||
+    type === 'text' ||
+    type === 'number' ||
+    type === 'spin_box' ||
+    type === 'file_browser'
+  ) {
+    return <TextOrNumberField field={field} />;
+  } else if (type === TYPE_CHECKBOX) {
+    return <CheckboxField field={field} />;
+  } else if (type === TYPE_NOTE) {
+    return <NoteField field={field} />;
+  } else {
+    return (
+      <p role="alert" style={{ marginBottom: '8px', color: 'var(--danger)', fontSize: '11px' }}>
+        Unsupported input type &quot;{field.ui_type}&quot; for {field.label}.
+      </p>
+    );
+  }
 };
