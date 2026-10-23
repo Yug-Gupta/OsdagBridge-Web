@@ -14,11 +14,20 @@
  *       elif type in BUTTON: render button
  *       elif type in NOTE: render note
  *       elif type in CHECKBOX: render checkbox
+ *
+ * Validation:
+ *   - On blur (text/number) or on change (select), calls POST /api/v1/validate.
+ *   - If the backend reports valid === false the backend message is surfaced via
+ *     FieldError; the user's typed value is preserved unchanged.
+ *   - If the backend is unreachable, validation is silently skipped.
+ *   - No validation logic is implemented client-side in this component;
+ *     all constraints come from the backend response.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { UIFieldSchema } from '../../types/schema';
 import { useBridgeStore } from '../../store/useBridgeStore';
+import { validateField } from '../../services/api';
 import { AlertCircle } from 'lucide-react';
 import {
   TYPE_BUTTON,
@@ -28,7 +37,6 @@ import {
   TYPE_LINE_EDIT,
   TYPE_NOTE,
   TYPE_CHECKBOX,
-  KEY_INCLUDE_MEDIAN,
 } from '../../utils/bridgeInputs';
 
 // ── Shared Sub-Components ──────────────────────────────────────────────────────
@@ -87,6 +95,7 @@ function FieldError({ id, error }: { id: string; error?: string }) {
 /**
  * ButtonField — mirrors the metadata-driven TYPE_BUTTON row in input_dock.py.
  * The schema action selects the supported web callback; the field key does not.
+ * button_label comes from the schema provided by the backend; no hardcoded fallbacks.
  */
 const ButtonField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
   const { inputs, location, isLocked, setLocationModalOpen } = useBridgeStore();
@@ -95,17 +104,22 @@ const ButtonField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
     field.action === 'show_project_location_dialog' ||
     field.action === 'open_project_location_modal';
 
+  // Display text: prefer the live location from store, then the stored input value,
+  // then the schema-provided button_label. No hardcoded place names.
   const locationText = location
     ? `${location.station}, ${location.state}`
-    : (inputs['project.location'] || 'New Delhi, Delhi');
+    : (inputs['project.location'] || null);
+
   const hasLocation = Boolean(locationText);
+
   const buttonText = opensLocationDialog
-    ? (location ? `${location.station}, ${location.state}` : (inputs['project.location'] || field.button_label || 'Delhi, India'))
+    ? (locationText || field.button_label || field.label)
     : (field.button_label || field.label);
+
   const showPin = field.post_row?.kind === 'info_row' && hasLocation;
 
   return (
-    <div style={{ marginBottom: '8px' }}>
+    <div style={{ marginBottom: field.show_group_title === false ? 0 : '8px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <FieldLabel field={field} />
         <button
@@ -149,6 +163,7 @@ const ButtonField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
 
 /**
  * SelectField — mirrors the desktop combobox factory.
+ * Calls POST /api/v1/validate on change; surfaces backend errors via FieldError.
  * Disabled schema options remain visible but cannot be selected.
  */
 const SelectField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
@@ -156,6 +171,23 @@ const SelectField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
   const value = inputs[field.key] ?? field.default ?? '';
   const options = field.options || [];
   const fieldId = `field-${field.key}`;
+  const errorId = `${fieldId}-error`;
+
+  const [validationError, setValidationError] = useState<string | undefined>(undefined);
+
+  const handleChange = useCallback(
+    async (newValue: string) => {
+      updateField(field.key, newValue);
+      setValidationError(undefined);
+
+      const allInputs = { ...useBridgeStore.getState().inputs, [field.key]: newValue };
+      const result = await validateField(field.key, newValue, allInputs);
+      if (result && !result.valid) {
+        setValidationError(result.message ?? 'Invalid value.');
+      }
+    },
+    [field.key],
+  );
 
   return (
     <div style={{ marginBottom: '8px' }}>
@@ -167,9 +199,9 @@ const SelectField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
             value={value}
             disabled={isLocked}
             aria-required={field.required || undefined}
-            onChange={(e) => {
-              updateField(field.key, e.target.value);
-            }}
+            aria-describedby={validationError ? errorId : undefined}
+            aria-invalid={validationError ? true : undefined}
+            onChange={(e) => handleChange(e.target.value)}
             className="osdag-select-field"
             style={{
               flex: 1,
@@ -214,6 +246,7 @@ const SelectField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
           )}
         </div>
       </div>
+      <FieldError id={errorId} error={validationError} />
     </div>
   );
 };
@@ -273,14 +306,29 @@ const NoteField: React.FC<{ field: UIFieldSchema }> = ({ field }) => (
 
 /**
  * TextOrNumberField — mirrors TYPE_TEXTBOX rows in input_dock.py.
- * Keeps edits local until focus leaves the field, matching desktop editingFinished.
+ *
+ * Keeps edits local until confirmed, matching desktop editingFinished.
+ *
+ * Range validation for Span and Carriageway Width (mirrors desktop Qt dialogs):
+ *   - Enter key triggers a client-side range check.
+ *   - If out of range, an "Input Error" dialog is shown with the exact desktop
+ *     message while the typed value is preserved unchanged in the field.
+ *   - After the user clicks OK, the field is automatically set to the nearest
+ *     valid boundary (max if above, min if below) and committed to the store.
+ *   - For all other fields, blur calls POST /api/v1/validate as before.
  */
 const TextOrNumberField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
-  const { inputs, updateField, isLocked } = useBridgeStore();
+  const { inputs, updateField, isLocked, showInputErrorDialog } = useBridgeStore();
 
   const value = inputs[field.key] ?? field.default ?? '';
-  const [localVal, setLocalVal] = useState<string>(value !== null && value !== undefined ? String(value) : '');
+  const [localVal, setLocalVal] = useState<string>(
+    value !== null && value !== undefined ? String(value) : '',
+  );
+  const [validationError, setValidationError] = useState<string | undefined>(undefined);
+
   const fieldId = `field-${field.key}`;
+  const errorId = `${fieldId}-error`;
+
   const isNumber =
     field.ui_type === 'number' ||
     (field.ui_type === 'textbox' &&
@@ -295,41 +343,151 @@ const TextOrNumberField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
     setLocalVal(value !== null && value !== undefined ? String(value) : '');
   }, [value]);
 
-  // Desktop records the placeholder method in schema metadata; keep the web
-  // equivalent metadata-driven instead of branching on a field key.
-  const resolvedPlaceholder = (() => {
-    if (field.placeholder_dynamic === '_carriageway_placeholder_text') {
-      const hasMedian = inputs[KEY_INCLUDE_MEDIAN] === 'Yes';
-      return hasMedian ? '≥ 8.5' : '4.25 – 24';
-    }
-    return field.placeholder;
-  })();
+  const isSpan = field.key === 'geometry.span';
+  const isWidth = field.key === 'geometry.carriageway_width';
+  const isSkew = field.key === 'geometry.skew_angle';
+  const isGeometric = isSpan || isWidth || isSkew;
 
   const handleTyping = (raw: string) => {
     setLocalVal(raw);
+    if (validationError) setValidationError(undefined);
   };
 
-  const handleBlur = () => {
+  // ── Range-check + dialog logic for Span, Carriageway Width, and Skew Angle ─
+  // Returns true if a validation dialog was shown (caller should not proceed
+  // with normal commit), false otherwise.
+  const checkRangeAndShowDialog = useCallback(
+    (trimmed: string): boolean => {
+      if (!isGeometric || field.min == null || field.max == null) return false;
+
+      const hasMedian = isWidth && inputs['geometry.include_median'] === 'Yes';
+      const effectiveMin = hasMedian ? 7.5 : field.min;
+      const effectiveMax = field.max;
+
+      const n = Number(trimmed);
+      if (trimmed === '' || Number.isNaN(n)) {
+        const message = isSpan
+          ? 'Span must be a numeric value.'
+          : isSkew
+          ? 'Skew angle must be a numeric value.'
+          : 'Carriageway width must be specified.';
+        const clampedVal = effectiveMin;
+        showInputErrorDialog(message, () => {
+          updateField(field.key, clampedVal);
+          setLocalVal(String(clampedVal));
+          setValidationError(undefined);
+        });
+        return true;
+      }
+
+      if (n > effectiveMax) {
+        // Above max
+        const message = isSpan
+          ? `Span must be between ${field.min} m and ${field.max} m (software limitation).`
+          : isSkew
+          ? `Skew angle must be between ${Number(field.min).toFixed(1)}° and ${Number(field.max).toFixed(1)}°.`
+          : `Carriageway width exceeds ${effectiveMax} m (software limitation).`;
+        const clampedVal = effectiveMax;
+        showInputErrorDialog(message, () => {
+          updateField(field.key, clampedVal);
+          setLocalVal(String(clampedVal));
+          setValidationError(undefined);
+        });
+        return true;
+      }
+
+      if (n < effectiveMin) {
+        // Below min
+        const message = isSpan
+          ? `Span must be between ${field.min} m and ${field.max} m (software limitation).`
+          : isSkew
+          ? `Skew angle must be between ${Number(field.min).toFixed(1)}° and ${Number(field.max).toFixed(1)}°.`
+          : `Minimum carriageway width required is ${hasMedian ? '7.50' : field.min} m as per IRC 5:2015 Clause 104.3.1.`;
+        const clampedVal = effectiveMin;
+        showInputErrorDialog(message, () => {
+          updateField(field.key, clampedVal);
+          setLocalVal(String(clampedVal));
+          setValidationError(undefined);
+        });
+        return true;
+      }
+
+      return false;
+    },
+    [isGeometric, isSpan, isWidth, isSkew, field.key, field.min, field.max, inputs, showInputErrorDialog, updateField],
+  );
+
+  // ── Enter key — validate range, then commit ───────────────────────────────
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+
+      const trimmed = localVal.trim();
+      if (checkRangeAndShowDialog(trimmed)) return; // dialog shown — wait for OK
+
+      // No range violation: commit normally and blur
+      if (!isNumber) {
+        updateField(field.key, trimmed);
+      } else if (trimmed === '') {
+        updateField(field.key, null);
+      } else {
+        const n = Number(trimmed);
+        updateField(field.key, Number.isNaN(n) ? trimmed : n);
+      }
+      (e.target as HTMLInputElement).blur();
+    },
+    [field.key, isNumber, localVal, checkRangeAndShowDialog, updateField],
+  );
+
+  // ── Blur — commit value (desktop never shows inline errors for basic inputs) ─
+  const handleBlur = useCallback(async () => {
     const trimmed = localVal.trim();
 
+    if (isGeometric && trimmed !== '') {
+      if (checkRangeAndShowDialog(trimmed)) return;
+    }
+
+    let committed: string | number | null;
+
     if (!isNumber) {
+      committed = trimmed;
       updateField(field.key, trimmed);
+    } else if (trimmed === '') {
+      committed = null;
+      updateField(field.key, null);
+    } else {
+      const n = Number(trimmed);
+      if (Number.isNaN(n)) {
+        committed = trimmed;
+        updateField(field.key, trimmed);
+      } else {
+        committed = n;
+        updateField(field.key, n);
+      }
+    }
+
+    // Span, Carriageway Width, and Skew Angle do not display inline red error text in desktop OsdagBridge
+    if (isGeometric) {
+      setValidationError(undefined);
       return;
     }
 
-    if (trimmed === '') {
-      updateField(field.key, null);
-      return;
+    // Call backend validation for non-geometric fields if needed
+    const allInputs = { ...useBridgeStore.getState().inputs, [field.key]: committed };
+    const result = await validateField(field.key, committed, allInputs);
+    if (result && !result.valid) {
+      setValidationError(result.message ?? 'Invalid value.');
+    } else {
+      setValidationError(undefined);
     }
-    const n = Number(trimmed);
-    if (!Number.isNaN(n)) {
-      let clamped = n;
-      if (field.min != null && clamped < field.min) clamped = field.min;
-      if (field.max != null && clamped > field.max) clamped = field.max;
-      setLocalVal(String(clamped));
-      updateField(field.key, clamped);
-    }
-  };
+  }, [checkRangeAndShowDialog, field.key, isGeometric, isNumber, localVal, updateField]);
+
+  const showTrailingUnit = Boolean(field.unit && !field.placeholder && !isGeometric);
+
+  const dynamicPlaceholder = isWidth
+    ? (inputs['geometry.include_median'] === 'Yes' ? '7.5-23.6 m' : (field.placeholder || '4.25-23.6 m'))
+    : field.placeholder;
 
   return (
     <div style={{ marginBottom: '8px' }}>
@@ -341,32 +499,31 @@ const TextOrNumberField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
             type="text"
             inputMode={isNumber ? 'decimal' : 'text'}
             value={localVal}
-            placeholder={resolvedPlaceholder}
+            placeholder={dynamicPlaceholder}
             disabled={isLocked}
             aria-required={field.required || undefined}
+            aria-describedby={!isGeometric && validationError ? errorId : undefined}
+            aria-invalid={!isGeometric && validationError ? true : undefined}
             onChange={(e) => handleTyping(e.target.value)}
+            onKeyDown={handleKeyDown}
             onBlur={handleBlur}
             className="osdag-input-field"
             style={{
               width: '100%',
-              paddingRight: field.unit ? '32px' : '7px',
+              paddingRight: showTrailingUnit ? '32px' : '7px',
               cursor: isLocked ? 'not-allowed' : 'text',
               opacity: isLocked ? 0.65 : 1,
             }}
           />
-          {field.unit && (
+          {showTrailingUnit && (
             <span
               aria-hidden="true"
               style={{
                 position: 'absolute',
-                right: '6px',
-                fontSize: '10px',
-                fontFamily: 'var(--font-mono)',
+                right: '8px',
+                fontSize: '11px',
                 color: 'var(--text-sub)',
                 pointerEvents: 'none',
-                background: 'var(--border-subtle)',
-                padding: '1px 3px',
-                borderRadius: '3px',
               }}
             >
               {field.unit}
@@ -374,9 +531,11 @@ const TextOrNumberField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
           )}
         </div>
       </div>
+      {!isGeometric && <FieldError id={errorId} error={validationError} />}
     </div>
   );
 };
+
 
 // ── Public Component ───────────────────────────────────────────────────────────
 
@@ -384,7 +543,7 @@ const TextOrNumberField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
  * SchemaField
  *
  * Direct if-else branching for field types mirroring desktop input_dock.py:
- *   if field_type == TYPE_BUTTON: ...
+ *   if field_type == TYPE_BUTTON: ...\
  *   elif field_type == TYPE_COMBO_BOX: ...
  *   elif field_type == TYPE_TEXTBOX: ...
  *   elif field_type == TYPE_CHECKBOX: ...

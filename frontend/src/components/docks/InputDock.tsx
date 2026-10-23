@@ -5,7 +5,7 @@
  * Adapts osdagbridge.desktop.ui.docks.input_dock.InputDock for React.
  *
  * Structural organization:
- *   - Top bar: "Basic Inputs" tab, "Additional Inputs" (display-only), Lock/Unlock toggle.
+ *   - Top bar: "Basic Inputs" tab, "Additional Inputs" tab, Lock/Unlock toggle.
  *   - Scroll area: Schema-driven containers & groupboxes (.osdag-groupbox).
  *   - Offline / unloaded state: When backend is unreachable, the dock remains
  *     unloaded and presents a clear error state without mock or fallback schemas.
@@ -186,10 +186,12 @@ export const InputDock: React.FC = () => {
                   Basic Inputs
                 </button>
 
-                {/* Additional Inputs Tab (display-only in basic UI PR) */}
+                {/* Additional Inputs Tab */}
                 <button
                   type="button"
-                  aria-label="Additional inputs (disabled in preview mode)"
+                  disabled
+                  title="Additional inputs will be enabled after basic inputs validation"
+                  aria-label="Additional inputs (available after basic inputs validation)"
                   className="osdag-btn-standard"
                   style={{
                     flex: '1 1 0',
@@ -199,10 +201,8 @@ export const InputDock: React.FC = () => {
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    cursor: 'default',
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
+                    opacity: 0.6,
+                    cursor: 'not-allowed',
                   }}
                 >
                   Additional Inputs

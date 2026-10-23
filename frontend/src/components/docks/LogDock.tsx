@@ -91,8 +91,8 @@ export const LogDock: React.FC = () => {
         borderTop: '1px solid var(--border-color)',
         display: 'flex',
         flexDirection: 'column',
-        height: isLogDockCollapsed ? '28px' : (activeViewportTab === 'plots' ? '140px' : '100%'),
-        flex: isLogDockCollapsed ? 'none' : 1,
+        height: isLogDockCollapsed ? '28px' : (activeViewportTab === 'plots' ? '140px' : 'clamp(130px, 18.5vh, 180px)'),
+        flexShrink: 0,
         transition: 'height 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         zIndex: 5,
         position: 'relative',
@@ -154,6 +154,7 @@ export const LogDock: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {/* Copy Logs */}
           <button
+            id="btn_copy_logs"
             type="button"
             onClick={handleCopyLogs}
             title="Copy logs to clipboard"
@@ -171,11 +172,12 @@ export const LogDock: React.FC = () => {
             {copied ? <Check size={13} /> : <Copy size={13} />}
           </button>
 
-          {/* Reset / Clear Logs (mirrors log_dock.py reset()) */}
+          {/* Delete / Close Log Dock */}
           <button
+            id="btn_delete_logs"
             type="button"
-            onClick={resetLogs}
-            title="Clear log and reset to initial state"
+            onClick={() => toggleLogDock(false)}
+            title="Close Log Window"
             style={{
               background: 'none',
               border: 'none',
@@ -192,6 +194,7 @@ export const LogDock: React.FC = () => {
 
           {/* Collapse / Expand */}
           <button
+            id="btn_toggle_collapse_logs"
             type="button"
             onClick={toggleLogDockCollapse}
             title={isLogDockCollapsed ? 'Expand Log Window' : 'Minimize Log Window'}
@@ -211,6 +214,7 @@ export const LogDock: React.FC = () => {
 
           {/* Close Dock */}
           <button
+            id="btn_close_logs"
             type="button"
             onClick={() => toggleLogDock(false)}
             title="Close Log Window"

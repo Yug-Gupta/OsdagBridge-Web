@@ -317,6 +317,7 @@ export const Header: React.FC = () => {
         {viewControls.map((ctrl) => (
           <button
             key={ctrl.key}
+            id={`btn_${ctrl.key}`}
             type="button"
             className={`osdag-viewbtn${ctrl.active ? ' is-active' : ''}`}
             title={ctrl.tooltip}

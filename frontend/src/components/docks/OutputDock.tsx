@@ -78,6 +78,7 @@ export const OutputDock: React.FC = () => {
     setReportModalOpen,
   } = useBridgeStore();
 
+  const isDesignAvailable = requireDesignCheck();
   const noOfGirders = getNoOfGirders(inputs, additionalInputs);
   const girderItems = Array.from({ length: noOfGirders }, (_, i) => `G${i + 1}`);
 
@@ -98,6 +99,12 @@ export const OutputDock: React.FC = () => {
       {isOutputDockCollapsed ? (
         // ─── Collapsed Indicator (mirrors desktop OutputDockIndicator) ─────────
         <div className="osdag-dock-indicator osdag-dock-indicator--output">
+          {/* row-reverse: strip on left toward center, label SVG on right outer edge */}
+          <img
+            src="/vectors/outputs_label_light.svg"
+            alt="Outputs"
+            style={{ width: '32px', height: '100%', display: 'block', userSelect: 'none' }}
+          />
           <div
             className="osdag-toggle-strip"
             onClick={toggleOutputDock}
@@ -117,11 +124,6 @@ export const OutputDock: React.FC = () => {
               ❮
             </button>
           </div>
-          <img
-            src="/vectors/outputs_label_light.svg"
-            alt="Outputs"
-            style={{ width: '28px', height: '100%', display: 'block', userSelect: 'none' }}
-          />
         </div>
       ) : (
         // ─── Expanded Output Panel ────────────────────────────────────────────
@@ -151,8 +153,8 @@ export const OutputDock: React.FC = () => {
           <aside
             aria-label="Bridge Design Outputs"
             style={{
-              width: '330px',
-              minWidth: '330px',
+              width: '340px',
+              minWidth: '340px',
               background: 'var(--bg-surface)',
               borderLeft: '1px solid var(--border-color)',
               height: '100%',
@@ -163,11 +165,11 @@ export const OutputDock: React.FC = () => {
           >
             <div
               style={{
-                padding: '12px 14px 10px 14px',
+                padding: '12px 15px 10px 15px',
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
-                minWidth: '330px',
+                minWidth: '310px',
                 boxSizing: 'border-box',
               }}
             >
@@ -241,12 +243,13 @@ export const OutputDock: React.FC = () => {
                             Member
                           </label>
                           <select
-                            value={analysisMember}
-                            onChange={(e) => setAnalysisMember(e.target.value)}
+                            value={analysisMember ?? ''}
+                            onChange={(e) => setAnalysisMember(e.target.value || null)}
                             className="osdag-select-field"
                             style={{ flex: 1 }}
                             aria-label="Analysis Member"
                           >
+                            <option value="">-</option>
                             <option value="All">All</option>
                             {girderItems.map((g) => (
                               <option key={g} value={g}>{g}</option>
@@ -260,12 +263,13 @@ export const OutputDock: React.FC = () => {
                             Load Case /<br />Combination
                           </label>
                           <select
-                            value={analysisLoadCase}
-                            onChange={(e) => setAnalysisLoadCase(e.target.value)}
+                            value={analysisLoadCase ?? ''}
+                            onChange={(e) => setAnalysisLoadCase(e.target.value || null)}
                             className="osdag-select-field"
                             style={{ flex: 1, fontSize: '11px' }}
                             aria-label="Analysis Load Case"
                           >
+                            <option value="">-</option>
                             <option value="1.35 DL + 1.5 LL">1.35 DL + 1.5 LL</option>
                             <option value="1.0 DL + 1.0 LL">1.0 DL + 1.0 LL</option>
                             <option value="0.9 DL + 1.5 LL">0.9 DL + 1.5 LL</option>
@@ -305,7 +309,7 @@ export const OutputDock: React.FC = () => {
                                   <input
                                     type="radio"
                                     name="force_radio_grid"
-                                    checked={analysisForce === item.key}
+                                    checked={Boolean(analysisForce && analysisForce === item.key)}
                                     onChange={() => setAnalysisForce(item.key)}
                                     style={{ accentColor: 'var(--accent-osdag)', cursor: 'pointer' }}
                                   />
@@ -334,7 +338,7 @@ export const OutputDock: React.FC = () => {
                             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', cursor: 'pointer' }}>
                               <input
                                 type="checkbox"
-                                checked={Boolean(analysisDisplayOptions.Max)}
+                                checked={Boolean(analysisDisplayOptions?.Max)}
                                 onChange={() => toggleAnalysisDisplayOption('Max')}
                                 style={{ accentColor: 'var(--accent-osdag)', cursor: 'pointer' }}
                               />
@@ -343,7 +347,7 @@ export const OutputDock: React.FC = () => {
                             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', cursor: 'pointer' }}>
                               <input
                                 type="checkbox"
-                                checked={Boolean(analysisDisplayOptions.Min)}
+                                checked={Boolean(analysisDisplayOptions?.Min)}
                                 onChange={() => toggleAnalysisDisplayOption('Min')}
                                 style={{ accentColor: 'var(--accent-osdag)', cursor: 'pointer' }}
                               />
@@ -354,7 +358,7 @@ export const OutputDock: React.FC = () => {
                             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', cursor: 'pointer' }}>
                               <input
                                 type="checkbox"
-                                checked={Boolean(analysisDisplayOptions.All)}
+                                checked={Boolean(analysisDisplayOptions?.All)}
                                 onChange={() => toggleAnalysisDisplayOption('All')}
                                 style={{ accentColor: 'var(--accent-osdag)', cursor: 'pointer' }}
                               />
@@ -363,7 +367,7 @@ export const OutputDock: React.FC = () => {
                             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', cursor: 'pointer' }}>
                               <input
                                 type="checkbox"
-                                checked={Boolean(analysisDisplayOptions.Summary)}
+                                checked={Boolean(analysisDisplayOptions?.Summary)}
                                 onChange={() => toggleAnalysisDisplayOption('Summary')}
                                 style={{ accentColor: 'var(--accent-osdag)', cursor: 'pointer' }}
                               />
@@ -385,12 +389,13 @@ export const OutputDock: React.FC = () => {
                             Member
                           </label>
                           <select
-                            value={designMember}
-                            onChange={(e) => setDesignMember(e.target.value)}
+                            value={designMember ?? ''}
+                            onChange={(e) => setDesignMember(e.target.value || null)}
                             className="osdag-select-field"
                             style={{ flex: 1 }}
                             aria-label="Design Member"
                           >
+                            <option value="">-</option>
                             {girderItems.map((g) => (
                               <option key={g} value={g}>{g}</option>
                             ))}
@@ -403,12 +408,13 @@ export const OutputDock: React.FC = () => {
                             Load Case /<br />Combination
                           </label>
                           <select
-                            value={designLoadCase}
-                            onChange={(e) => setDesignLoadCase(e.target.value)}
+                            value={designLoadCase ?? ''}
+                            onChange={(e) => setDesignLoadCase(e.target.value || null)}
                             className="osdag-select-field"
                             style={{ flex: 1, fontSize: '11px' }}
                             aria-label="Design Load Case"
                           >
+                            <option value="">-</option>
                             <option value="Design Envelope">Design Envelope</option>
                             <option value="1.35 DL + 1.5 LL">1.35 DL + 1.5 LL</option>
                             <option value="1.0 DL + 1.0 LL">1.0 DL + 1.0 LL</option>
@@ -417,25 +423,28 @@ export const OutputDock: React.FC = () => {
 
                         {/* DCR Utilization Bars */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '10px' }}>
-                          <PercentBarWidget label="Strength Limit State (Flexure)" value={dcrValues.flexure} />
-                          <PercentBarWidget label="Strength Limit State (Shear)" value={dcrValues.shear} />
-                          <PercentBarWidget label="Interaction" value={dcrValues.interaction} />
-                          <PercentBarWidget label="Lateral Torsional Buckling" value={dcrValues.ltb} />
-                          <PercentBarWidget label="Resistance to Longitudinal Shear" value={dcrValues.longTransShear} />
-                          <PercentBarWidget label="Resistance to Fatigue" value={dcrValues.fatigue} />
-                          <PercentBarWidget label="Stress Limitation" value={dcrValues.stressLimitation} />
-                          <PercentBarWidget label="Deflection" value={dcrValues.deflection} />
+                          <PercentBarWidget label="Strength Limit State (Flexure)" value={dcrValues?.flexure ?? 0} />
+                          <PercentBarWidget label="Strength Limit State (Shear)" value={dcrValues?.shear ?? 0} />
+                          <PercentBarWidget label="Interaction" value={dcrValues?.interaction ?? 0} />
+                          <PercentBarWidget label="Lateral Torsional Buckling" value={dcrValues?.ltb ?? 0} />
+                          <PercentBarWidget label="Resistance to Longitudinal Shear" value={dcrValues?.longTransShear ?? 0} />
+                          <PercentBarWidget label="Resistance to Fatigue" value={dcrValues?.fatigue ?? 0} />
+                          <PercentBarWidget label="Stress Limitation" value={dcrValues?.stressLimitation ?? 0} />
+                          <PercentBarWidget label="Deflection" value={dcrValues?.deflection ?? 0} />
                         </div>
 
                         {/* Analysis and Design Summary Button */}
                         <button
                           type="button"
-                          onClick={() => {
-                            if (!requireDesignCheck()) return;
-                            setSteelDesignModalOpen(true);
-                          }}
+                          disabled={!isDesignAvailable}
+                          title={!isDesignAvailable ? 'Available after running design' : undefined}
+                          onClick={isDesignAvailable ? () => setSteelDesignModalOpen(true) : undefined}
                           className="osdag-action-btn"
-                          style={{ width: '100%' }}
+                          style={{
+                            width: '100%',
+                            opacity: !isDesignAvailable ? 0.6 : 1,
+                            cursor: !isDesignAvailable ? 'not-allowed' : 'pointer',
+                          }}
                         >
                           Analysis and Design Summary
                         </button>
@@ -448,12 +457,16 @@ export const OutputDock: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (!requireDesignCheck()) return;
-                            setTransverseDesignModalOpen(true);
-                          }}
+                          disabled={!isDesignAvailable}
+                          title={!isDesignAvailable ? 'Available after running design' : undefined}
+                          onClick={isDesignAvailable ? () => setTransverseDesignModalOpen(true) : undefined}
                           className="osdag-action-btn"
-                          style={{ width: '100%', marginTop: '2px' }}
+                          style={{
+                            width: '100%',
+                            marginTop: '2px',
+                            opacity: !isDesignAvailable ? 0.6 : 1,
+                            cursor: !isDesignAvailable ? 'not-allowed' : 'pointer',
+                          }}
                         >
                           Design Summary
                         </button>
@@ -466,12 +479,16 @@ export const OutputDock: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (!requireDesignCheck()) return;
-                            setDeckDesignModalOpen(true);
-                          }}
+                          disabled={!isDesignAvailable}
+                          title={!isDesignAvailable ? 'Available after running design' : undefined}
+                          onClick={isDesignAvailable ? () => setDeckDesignModalOpen(true) : undefined}
                           className="osdag-action-btn"
-                          style={{ width: '100%', marginTop: '2px' }}
+                          style={{
+                            width: '100%',
+                            marginTop: '2px',
+                            opacity: !isDesignAvailable ? 0.6 : 1,
+                            cursor: !isDesignAvailable ? 'not-allowed' : 'pointer',
+                          }}
                         >
                           Design Summary
                         </button>
@@ -516,36 +533,42 @@ export const OutputDock: React.FC = () => {
                 style={{
                   display: 'flex',
                   gap: '8px',
-                  marginTop: '12px',
+                  marginTop: '10px',
                   paddingTop: '2px',
                 }}
               >
                 {/* Generate Results Table Button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!requireDesignCheck()) return;
-                    setGenerateResultsModalOpen(true);
-                  }}
+                  disabled={!isDesignAvailable}
+                  title={!isDesignAvailable ? 'Available after running design' : undefined}
+                  onClick={isDesignAvailable ? () => setGenerateResultsModalOpen(true) : undefined}
                   className="dock-custom-button"
-                  style={{ flex: 1, padding: '8px 8px' }}
+                  style={{
+                    flex: 1.28,
+                    minWidth: 0,
+                    cursor: !isDesignAvailable ? 'not-allowed' : 'pointer',
+                  }}
                 >
-                  <img src="/vectors/design_result_table.svg" alt="" width={18} height={18} />
-                  <span>Results Table</span>
+                  <img src="/vectors/design_result_table.svg" alt="" width={16} height={16} />
+                  <span>Generate Results Table</span>
                 </button>
 
                 {/* Generate Report Button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!requireDesignCheck()) return;
-                    setReportModalOpen(true);
-                  }}
+                  disabled={!isDesignAvailable}
+                  title={!isDesignAvailable ? 'Available after running design' : undefined}
+                  onClick={isDesignAvailable ? () => setReportModalOpen(true) : undefined}
                   className="dock-custom-button"
-                  style={{ flex: 1, padding: '8px 8px' }}
+                  style={{
+                    flex: 0.88,
+                    minWidth: 0,
+                    cursor: !isDesignAvailable ? 'not-allowed' : 'pointer',
+                  }}
                 >
-                  <img src="/vectors/design_report.svg" alt="" width={18} height={18} />
-                  <span>Create Report</span>
+                  <img src="/vectors/design_report.svg" alt="" width={16} height={16} />
+                  <span>Generate Report</span>
                 </button>
               </div>
             </div>

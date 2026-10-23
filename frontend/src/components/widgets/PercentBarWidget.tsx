@@ -2,11 +2,11 @@ import React from 'react';
 
 interface PercentBarWidgetProps {
   label: string;
-  value: number; // 0 to 150
+  value?: number | null; // 0 to 150
 }
 
 export const PercentBarWidget: React.FC<PercentBarWidgetProps> = ({ label, value }) => {
-  const clampedValue = Math.max(0, value);
+  const clampedValue = Math.max(0, value ?? 0);
   const exceeded = clampedValue >= 100.0;
   const fillRatio = Math.min(clampedValue / 150.0, 1.0);
   const fillColor = exceeded ? '#CC2222' : '#90AF13';

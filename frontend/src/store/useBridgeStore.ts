@@ -12,12 +12,11 @@
 import { create } from 'zustand';
 import { UIFieldSchema } from '../types/schema';
 import { LocationData } from '../types/location';
-import { getNoOfGirders, INPUT_KEYS } from '../utils/bridgeInputs';
+import { INPUT_KEYS } from '../utils/bridgeInputs';
 import {
   fetchBasicSchema,
   fetchSteelMaterials,
   fetchConcreteMaterials,
-  fetchLocationDetails,
   type ConcreteMaterial,
   type SteelMaterial,
 } from '../services/api';
@@ -30,17 +29,21 @@ export interface LogEntry {
   message: string;
   level: 'info' | 'error' | 'success' | 'warning' | 'stdout_print';
 }
+function formatLogTimestamp(): string {
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
 
-const STATIC_LOGS: LogEntry[] = [
-  { id: 'init-1', timestamp: '10:00:00', message: '[INFO] OsdagBridge CAD Workbench initialized (UI Preview Mode)', level: 'info' },
-  { id: 'init-2', timestamp: '10:00:01', message: '[INFO] Design standard: IRC:6-2017 & IRC:24-2010 loaded',          level: 'info' },
-  { id: 'init-3', timestamp: '10:00:02', message: '[INFO] Superstructure: Steel-Concrete Composite I-Girder Bridge',  level: 'info' },
-  { id: 'init-4', timestamp: '10:00:02', message: '[INFO] Geometry: Span = 35.0 m | Carriageway = 10.5 m | Skew = 0.0°', level: 'info' },
-  { id: 'init-5', timestamp: '10:00:03', message: '[INFO] Girder Arrangement: 4 Girders @ 2.75 m spacing',           level: 'info' },
-  { id: 'init-6', timestamp: '10:00:04', message: '[SUCCESS] Design Envelope: 1.35 DL + 1.5 LL loaded',              level: 'success' },
-  { id: 'init-7', timestamp: '10:00:05', message: '[SUCCESS] Member limit state verification: All checks satisfy IRC criteria', level: 'success' },
-  { id: 'init-8', timestamp: '10:00:06', message: '[INFO] Ready for inspection in Output Dock',                       level: 'info' },
-];
+function createInitialLogEntry(): LogEntry {
+  const timestamp = formatLogTimestamp();
+  return {
+    id: `init-${Date.now()}`,
+    timestamp,
+    message: `[${timestamp}] Log initialized`,
+    level: 'info',
+  };
+}
 
 interface BridgeState {
   // ── Input schema ───────────────────────────────────────────────────────────
@@ -60,15 +63,17 @@ interface BridgeState {
   isLocked: boolean;
   collapsedContainers: Record<string, boolean>;
 
-  // ── Output dock (static display values) ───────────────────────────────────
+  // ── Output dock (display values) ───────────────────────────────────────────
   outputCollapsedSections: Record<string, boolean>;
-  analysisMember: string;
-  analysisLoadCase: string;
-  analysisForce: string;
+  analysisMember: string | null;
+  analysisLoadCase: string | null;
+  analysisForce: string | null;
   analysisDisplayOptions: Record<string, boolean>;
-  designMember: string;
-  designLoadCase: string;
-  dcrValues: Record<string, number>;
+  designMember: string | null;
+  designLoadCase: string | null;
+  dcrValues: Record<string, number> | null;
+  /** Null until a design run has completed and returned results. */
+  srcValues: Record<string, number> | null;
 
   // ── Log dock ───────────────────────────────────────────────────────────────
   isLogDockOpen: boolean;
@@ -80,6 +85,9 @@ interface BridgeState {
   // ── Theme ──────────────────────────────────────────────────────────────────
   darkMode: boolean;
 
+  // ── Input Error Dialog ─────────────────────────────────────────────────────
+  inputErrorDialog: { message: string; onOk: () => void } | null;
+
   // ── Actions ────────────────────────────────────────────────────────────────
   fetchSchema: () => Promise<void>;
   updateField: (key: string, value: any) => void;
@@ -87,12 +95,12 @@ interface BridgeState {
   toggleDock: () => void;
   toggleOutputDock: () => void;
   toggleOutputSection: (section: string) => void;
-  setAnalysisMember: (m: string) => void;
-  setAnalysisLoadCase: (lc: string) => void;
-  setAnalysisForce: (f: string) => void;
+  setAnalysisMember: (m: string | null) => void;
+  setAnalysisLoadCase: (lc: string | null) => void;
+  setAnalysisForce: (f: string | null) => void;
   toggleAnalysisDisplayOption: (key: string) => void;
-  setDesignMember: (m: string) => void;
-  setDesignLoadCase: (lc: string) => void;
+  setDesignMember: (m: string | null) => void;
+  setDesignLoadCase: (lc: string | null) => void;
   toggleContainer: (container: string) => void;
   toggleLogDock: (open?: boolean) => void;
   toggleLogDockCollapse: () => void;
@@ -100,6 +108,8 @@ interface BridgeState {
   toggleDarkMode: () => void;
   setLocation: (loc: LocationData) => void;
   setLocationModalOpen: (open: boolean) => void;
+  showInputErrorDialog: (message: string, onOk: () => void) => void;
+  dismissInputErrorDialog: () => void;
 
   // UI-only no-ops (kept so existing JSX references compile)
   saveInputs: () => void;
@@ -148,34 +158,29 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
   isLocked: false,
   collapsedContainers: {},
 
-  // ── Output dock (static) ───────────────────────────────────────────────────
+  // ── Output dock (defaults to null before design run) ──────────────────────
   outputCollapsedSections: {},
-  analysisMember: 'All',
-  analysisLoadCase: '1.35 DL + 1.5 LL',
-  analysisForce: 'Mz',
-  analysisDisplayOptions: { Max: true, Min: false, All: true, Summary: false },
-  designMember: 'G1',
-  designLoadCase: 'Design Envelope',
-  dcrValues: {
-    flexure: 78,
-    shear: 45,
-    interaction: 62,
-    ltb: 55,
-    longTransShear: 34,
-    fatigue: 40,
-    stressLimitation: 70,
-    deflection: 25,
-  },
+  analysisMember: null,
+  analysisLoadCase: null,
+  analysisForce: null,
+  analysisDisplayOptions: {},
+  designMember: null,
+  designLoadCase: null,
+  dcrValues: null,
 
   // ── Log dock (static) ─────────────────────────────────────────────────────
   isLogDockOpen: true,
   isLogDockCollapsed: false,
   logWindowTitle: 'Log Window',
   logProgress: null,
-  logs: STATIC_LOGS,
+  logs: [createInitialLogEntry()],
+  srcValues: null,
 
   // ── Theme ──────────────────────────────────────────────────────────────────
   darkMode: false,
+
+  // ── Input Error Dialog ─────────────────────────────────────────────────────
+  inputErrorDialog: null,
 
   // ── Viewport (display-only, drives Header button state) ───────────────────
   activeViewportTab: 'dual',
@@ -192,12 +197,14 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
       // (materials, location) fall back internally and do not throw.
       const schemaData = await fetchBasicSchema();
 
-      const [steelMaterials, concreteMaterials, locationData] = await Promise.all([
+      const [steelMaterials, concreteMaterials] = await Promise.all([
         fetchSteelMaterials(),
         fetchConcreteMaterials(),
-        fetchLocationDetails('Delhi', 'New Delhi'),
       ]);
 
+      // Populate inputs from schema-provided defaults only.
+      // /api/v1/schema already supplies a 'default' for every field, so no
+      // manual per-key fallbacks are needed here.
       const initialInputs: Record<string, any> = { ...get().inputs };
       schemaData.forEach((f) => {
         if (f.default !== undefined && f.default !== null && initialInputs[f.key] === undefined) {
@@ -205,17 +212,9 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
         }
       });
 
-      if (initialInputs['geometry.span'] === undefined)              initialInputs['geometry.span'] = 35;
-      if (initialInputs['geometry.carriageway_width'] === undefined) initialInputs['geometry.carriageway_width'] = 10.5;
-      if (initialInputs['geometry.skew_angle'] === undefined)        initialInputs['geometry.skew_angle'] = 0;
-      if (locationData) {
-        initialInputs['project.location'] = `${locationData.station}, ${locationData.state}`;
-      }
-
       set({
         schema: schemaData,
         inputs: initialInputs,
-        location: locationData,
         schemaLoading: false,
         schemaError: null,
         steelMaterials,
@@ -282,7 +281,12 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
   toggleLogDockCollapse: () =>
     set((state) => ({ isLogDockCollapsed: !state.isLogDockCollapsed })),
 
-  resetLogs: () => set({ logs: STATIC_LOGS }),
+  resetLogs: () =>
+    set({
+      logWindowTitle: 'Log Window',
+      logProgress: null,
+      logs: [createInitialLogEntry()],
+    }),
 
   toggleDarkMode: () =>
     set((state) => {
@@ -296,11 +300,21 @@ export const useBridgeStore = create<BridgeState>((set, get) => ({
       location: loc,
       inputs: {
         ...state.inputs,
-        'project.location': `${loc.station}, ${loc.state}`,
+        // Preserve the display string and all four environmental parameters
+        // returned by /api/v1/location/details (IRC:6 wind, seismic zone,
+        // temperature range). Keys are the canonical INPUT_KEYS constants.
+        [INPUT_KEYS.projectLocation]: `${loc.station}, ${loc.state}`,
+        [INPUT_KEYS.windSpeed]:        loc.basic_wind_speed,
+        [INPUT_KEYS.seismicZone]:      loc.seismic_zone,
+        [INPUT_KEYS.maxTemp]:          loc.max_temperature,
+        [INPUT_KEYS.minTemp]:          loc.min_temperature,
       },
     })),
 
   setLocationModalOpen: (isLocationModalOpen) => set({ isLocationModalOpen }),
+
+  showInputErrorDialog: (message, onOk) => set({ inputErrorDialog: { message, onOk } }),
+  dismissInputErrorDialog: () => set({ inputErrorDialog: null }),
 
   setActiveViewportTab: (activeViewportTab) => set({ activeViewportTab }),
   toggleCrossSection: () => set((s) => ({ showCrossSection: !s.showCrossSection })),

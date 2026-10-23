@@ -8,8 +8,10 @@
  *   ┌─────────────────────────────────────────────────┐
  *   │ Header (menu bar + viewport toggles)            │
  *   ├────────────┬──────────────────────┬─────────────┤
- *   │ InputDock  │   Log / Viewport     │ OutputDock  │
- *   │            │   (app-center)       │             │
+ *   │ InputDock  │   (app-center)       │ OutputDock  │
+ *   │            │                      │             │
+ *   │            ├──────────────────────┤             │
+ *   │            │ LogDock (bottom-ctr) │             │
  *   └────────────┴──────────────────────┴─────────────┘
  *
  * Modals:
@@ -23,9 +25,11 @@ import { InputDock } from './components/docks/InputDock';
 import { OutputDock } from './components/docks/OutputDock';
 import { LogDock } from './components/docks/LogDock';
 import { ProjectLocationModal } from './components/dialogs/ProjectLocationModal';
+import { InputErrorDialog } from './components/dialogs/InputErrorDialog';
 
 export default function App() {
   const darkMode = useBridgeStore((s) => s.darkMode);
+  const isLogDockOpen = useBridgeStore((s) => s.isLogDockOpen);
 
   // Sync the HTML root element's data-theme attribute with the store flag
   useEffect(() => {
@@ -63,7 +67,29 @@ export default function App() {
             position: 'relative',
           }}
         >
-          <LogDock />
+          {/* LogDock anchored to bottom-center of the center panel.
+              position:absolute keeps it out of the flex flow so the
+              center area above stays free for a future viewport panel.
+              maxHeight:50% prevents the expanded dock from covering more
+              than half the available height and overlapping the side docks.
+              width:100% + left:0 fills the full center column width. */}
+          {isLogDockOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                width: '100%',
+                maxHeight: '50%',
+                zIndex: 10,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              <LogDock />
+            </div>
+          )}
         </div>
 
         <OutputDock />
@@ -71,6 +97,7 @@ export default function App() {
 
       {/* Modals — always mounted, revealed by store flags */}
       <ProjectLocationModal />
+      <InputErrorDialog />
     </div>
   );
 }

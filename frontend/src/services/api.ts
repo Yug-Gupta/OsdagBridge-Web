@@ -5,20 +5,21 @@
  * Uses Vite /api/v1 proxy or VITE_API_BASE_URL environment variable.
  *
  * Endpoints:
- *   - GET /schema            -> fetchBasicSchema (throws on backend failure)
- *   - GET /location/states   -> fetchLocationStates
- *   - GET /location/stations -> fetchLocationStations
- *   - GET /location/details  -> fetchLocationDetails
- *   - GET /materials/steel   -> fetchSteelMaterials
- *   - GET /materials/concrete-> fetchConcreteMaterials
- *   - GET /sections/rolled   -> fetchRolledSections
+ *   - GET  /schema            -> fetchBasicSchema (throws on backend failure)
+ *   - POST /validate          -> validateField
+ *   - GET  /location/states   -> fetchLocationStates
+ *   - GET  /location/stations -> fetchLocationStations
+ *   - GET  /location/details  -> fetchLocationDetails
+ *   - GET  /materials/steel   -> fetchSteelMaterials
+ *   - GET  /materials/concrete-> fetchConcreteMaterials
+ *   - GET  /sections/rolled   -> fetchRolledSections
  *
  * All material, section, and location data is fetched directly from the backend
  * without hard-coded frontend fallback catalogs.
  */
 
 import axios from 'axios';
-import { UIFieldSchema } from '../types/schema';
+import { UIFieldSchema, ValidateFieldResponse } from '../types/schema';
 import { LocationData } from '../types/location';
 
 export const apiClient = axios.create({
@@ -75,19 +76,42 @@ export function normalizeSchemaPayload(data: unknown): UIFieldSchema[] {
     throw new Error('Schema payload contains invalid field definitions');
   }
 
-  // Augment fields with presentation enhancements
+  // Augment fields with presentation enhancements.
   return (list as UIFieldSchema[]).map((field) => {
+    if (field.key === 'structure.type') {
+      return {
+        ...field,
+        disabled_options: ['Other'],
+      };
+    }
+    if (field.key === 'geometry.design_mode') {
+      return {
+        ...field,
+        show_group_title: false,
+        default: 'Custom',
+        disabled_options: ['Optimized'],
+      };
+    }
     if (field.key === 'project.location') {
       return {
         ...field,
-        button_label: field.button_label || 'Delhi, India',
+        show_group_title: false,
+        button_label: field.button_label || 'Select Location',
         post_row: field.post_row || { kind: 'info_row' },
+      };
+    }
+    if (field.key === 'geometry.carriageway_width') {
+      return {
+        ...field,
+        placeholder: field.placeholder || '4.25-23.6 m',
       };
     }
     if (field.key === 'geometry.additional_btn') {
       return {
         ...field,
-        button_label: field.button_label || field.label || 'Additional Geometry',
+        group: 'Additional Geometry',
+        show_group_title: false,
+        button_label: field.button_label || 'Modify Here',
       };
     }
     if (field.key.startsWith('material.')) {
@@ -286,4 +310,30 @@ export async function fetchRolledSections(): Promise<RolledSection[]> {
 /** Display-only — no additional inputs content in UI preview mode. */
 export async function fetchAdditionalInputsSchema(): Promise<unknown[]> {
   return [];
+}
+
+/**
+ * Validate a single field value against IRC / Osdag design constraints.
+ * Calls POST /api/v1/validate with { key, value, all_inputs }.
+ * Returns the backend ValidateFieldResponse ({ valid, message, corrected_value }).
+ * Returns null if the backend is unreachable (network error).
+ */
+export async function validateField(
+  key: string,
+  value: unknown,
+  allInputs: Record<string, unknown> = {},
+): Promise<ValidateFieldResponse | null> {
+  try {
+    const res = await apiClient.post<ValidateFieldResponse>('/validate', {
+      key,
+      value,
+      all_inputs: allInputs,
+    });
+    return res.data;
+  } catch (error) {
+    // Validation errors from the backend are always 200 responses;
+    // a network/5xx error means the validator is unavailable — do not block the user.
+    console.warn('Validation endpoint unavailable:', error);
+    return null;
+  }
 }
