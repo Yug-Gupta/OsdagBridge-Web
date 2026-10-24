@@ -230,7 +230,7 @@ const SelectField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
               type="button"
               title="View material properties"
               aria-label={`View properties for ${field.label}`}
-              onClick={() => {}}
+              onClick={() => { }}
               style={{
                 width: '20px',
                 height: '20px',
@@ -309,13 +309,14 @@ const NoteField: React.FC<{ field: UIFieldSchema }> = ({ field }) => (
  *
  * Keeps edits local until confirmed, matching desktop editingFinished.
  *
- * Range validation for Span and Carriageway Width (mirrors desktop Qt dialogs):
- *   - Enter key triggers a client-side range check.
- *   - If out of range, an "Input Error" dialog is shown with the exact desktop
- *     message while the typed value is preserved unchanged in the field.
- *   - After the user clicks OK, the field is automatically set to the nearest
- *     valid boundary (max if above, min if below) and committed to the store.
- *   - For all other fields, blur calls POST /api/v1/validate as before.
+ * Validation:
+ *   - Blur or Enter key commits edits and calls POST /api/v1/validate.
+ *   - Backend response is the single source of truth for validity, error messages,
+ *     and corrected values.
+ *   - For invalid geometric inputs (Span, Carriageway Width, Skew Angle), shows
+ *     an "Input Error" dialog matching desktop behaviour.
+ *   - When the user acknowledges the dialog, the field updates to the backend-provided
+ *     corrected_value (nearest valid value) if present.
  */
 const TextOrNumberField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
   const { inputs, updateField, isLocked, showInputErrorDialog } = useBridgeStore();
@@ -343,110 +344,27 @@ const TextOrNumberField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
     setLocalVal(value !== null && value !== undefined ? String(value) : '');
   }, [value]);
 
-  const isSpan = field.key === 'geometry.span';
-  const isWidth = field.key === 'geometry.carriageway_width';
-  const isSkew = field.key === 'geometry.skew_angle';
-  const isGeometric = isSpan || isWidth || isSkew;
+  const isGeometric =
+    field.key === 'geometry.span' ||
+    field.key === 'geometry.carriageway_width' ||
+    field.key === 'geometry.skew_angle';
 
   const handleTyping = (raw: string) => {
     setLocalVal(raw);
     if (validationError) setValidationError(undefined);
   };
 
-  // ── Range-check + dialog logic for Span, Carriageway Width, and Skew Angle ─
-  // Returns true if a validation dialog was shown (caller should not proceed
-  // with normal commit), false otherwise.
-  const checkRangeAndShowDialog = useCallback(
-    (trimmed: string): boolean => {
-      if (!isGeometric || field.min == null || field.max == null) return false;
-
-      const hasMedian = isWidth && inputs['geometry.include_median'] === 'Yes';
-      const effectiveMin = hasMedian ? 7.5 : field.min;
-      const effectiveMax = field.max;
-
-      const n = Number(trimmed);
-      if (trimmed === '' || Number.isNaN(n)) {
-        const message = isSpan
-          ? 'Span must be a numeric value.'
-          : isSkew
-          ? 'Skew angle must be a numeric value.'
-          : 'Carriageway width must be specified.';
-        const clampedVal = effectiveMin;
-        showInputErrorDialog(message, () => {
-          updateField(field.key, clampedVal);
-          setLocalVal(String(clampedVal));
-          setValidationError(undefined);
-        });
-        return true;
-      }
-
-      if (n > effectiveMax) {
-        // Above max
-        const message = isSpan
-          ? `Span must be between ${field.min} m and ${field.max} m (software limitation).`
-          : isSkew
-          ? `Skew angle must be between ${Number(field.min).toFixed(1)}° and ${Number(field.max).toFixed(1)}°.`
-          : `Carriageway width exceeds ${effectiveMax} m (software limitation).`;
-        const clampedVal = effectiveMax;
-        showInputErrorDialog(message, () => {
-          updateField(field.key, clampedVal);
-          setLocalVal(String(clampedVal));
-          setValidationError(undefined);
-        });
-        return true;
-      }
-
-      if (n < effectiveMin) {
-        // Below min
-        const message = isSpan
-          ? `Span must be between ${field.min} m and ${field.max} m (software limitation).`
-          : isSkew
-          ? `Skew angle must be between ${Number(field.min).toFixed(1)}° and ${Number(field.max).toFixed(1)}°.`
-          : `Minimum carriageway width required is ${hasMedian ? '7.50' : field.min} m as per IRC 5:2015 Clause 104.3.1.`;
-        const clampedVal = effectiveMin;
-        showInputErrorDialog(message, () => {
-          updateField(field.key, clampedVal);
-          setLocalVal(String(clampedVal));
-          setValidationError(undefined);
-        });
-        return true;
-      }
-
-      return false;
-    },
-    [isGeometric, isSpan, isWidth, isSkew, field.key, field.min, field.max, inputs, showInputErrorDialog, updateField],
-  );
-
-  // ── Enter key — validate range, then commit ───────────────────────────────
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key !== 'Enter') return;
+  // ── Enter key — trigger commit and validation via blur ──────────────────────
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
       e.preventDefault();
-
-      const trimmed = localVal.trim();
-      if (checkRangeAndShowDialog(trimmed)) return; // dialog shown — wait for OK
-
-      // No range violation: commit normally and blur
-      if (!isNumber) {
-        updateField(field.key, trimmed);
-      } else if (trimmed === '') {
-        updateField(field.key, null);
-      } else {
-        const n = Number(trimmed);
-        updateField(field.key, Number.isNaN(n) ? trimmed : n);
-      }
       (e.target as HTMLInputElement).blur();
-    },
-    [field.key, isNumber, localVal, checkRangeAndShowDialog, updateField],
-  );
+    }
+  }, []);
 
-  // ── Blur — commit value (desktop never shows inline errors for basic inputs) ─
+  // ── Blur — commit value and validate against backend ──────────────────────
   const handleBlur = useCallback(async () => {
     const trimmed = localVal.trim();
-
-    if (isGeometric && trimmed !== '') {
-      if (checkRangeAndShowDialog(trimmed)) return;
-    }
 
     let committed: string | number | null;
 
@@ -467,27 +385,28 @@ const TextOrNumberField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
       }
     }
 
-    // Span, Carriageway Width, and Skew Angle do not display inline red error text in desktop OsdagBridge
-    if (isGeometric) {
-      setValidationError(undefined);
-      return;
-    }
-
-    // Call backend validation for non-geometric fields if needed
     const allInputs = { ...useBridgeStore.getState().inputs, [field.key]: committed };
     const result = await validateField(field.key, committed, allInputs);
+
     if (result && !result.valid) {
-      setValidationError(result.message ?? 'Invalid value.');
+      const message = result.message ?? 'Invalid value.';
+
+      if (isGeometric) {
+        showInputErrorDialog(message, () => {
+          if (result.corrected_value !== null && result.corrected_value !== undefined) {
+            updateField(field.key, result.corrected_value);
+            setLocalVal(String(result.corrected_value));
+          }
+        });
+      } else {
+        setValidationError(message);
+      }
     } else {
       setValidationError(undefined);
     }
-  }, [checkRangeAndShowDialog, field.key, isGeometric, isNumber, localVal, updateField]);
+  }, [field.key, isGeometric, isNumber, localVal, showInputErrorDialog, updateField]);
 
   const showTrailingUnit = Boolean(field.unit && !field.placeholder && !isGeometric);
-
-  const dynamicPlaceholder = isWidth
-    ? (inputs['geometry.include_median'] === 'Yes' ? '7.5-23.6 m' : (field.placeholder || '4.25-23.6 m'))
-    : field.placeholder;
 
   return (
     <div style={{ marginBottom: '8px' }}>
@@ -499,7 +418,7 @@ const TextOrNumberField: React.FC<{ field: UIFieldSchema }> = ({ field }) => {
             type="text"
             inputMode={isNumber ? 'decimal' : 'text'}
             value={localVal}
-            placeholder={dynamicPlaceholder}
+            placeholder={field.placeholder}
             disabled={isLocked}
             aria-required={field.required || undefined}
             aria-describedby={!isGeometric && validationError ? errorId : undefined}
